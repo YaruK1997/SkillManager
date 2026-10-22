@@ -1,0 +1,46 @@
+services:
+  skill-manager:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: skill-manager:0.1.0
+    container_name: skill-manager
+    restart: unless-stopped
+    environment:
+      - GITHUB_TOKEN=${GITHUB_TOKEN:-}
+      - HF_TOKEN=${HF_TOKEN:-}
+      - PYTHONUNBUFFERED=1
+    volumes:
+      - skills-data:/home/appuser/.gemini/antigravity/skills
+    networks:
+      - skill-net
+    deploy:
+      resources:
+        limits:
+          cpus: "0.50"
+          memory: 128M
+        reservations:
+          cpus: "0.10"
+          memory: 32M
+    # Run periodic healthcheck & scan loop to keep service alive as a managed daemon
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        skill-manager healthcheck --format json &&
+        skill-manager scan --format json &&
+        while true; do sleep 60; skill-manager healthcheck --format json > /dev/null; done
+    healthcheck:
+      test: ["CMD", "skill-manager", "healthcheck", "--format", "json"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+
+volumes:
+  skills-data:
+    driver: local
+
+networks:
+  skill-net:
+    driver: bridge
+

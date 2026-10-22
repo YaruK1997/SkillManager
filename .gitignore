@@ -50,6 +50,7 @@ dmypy.json
 # SkillManager runtime / scratch artifacts
 *.tmp
 *.log
+!docs/self_check.log
 local_test_*/
 .skill_cache/
 
