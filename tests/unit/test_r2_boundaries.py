@@ -267,3 +267,26 @@ def test_security_cwe88_git_ref_injection_blocked(git_repo_with_remote):
 
     with pytest.raises(GitVersionError, match="INVALID_GIT_REF"):
         upgrade_skill(local_repo_dir, target_ref="../escape", force=True)
+
+
+@pytest.mark.r2
+def test_security_cwe22_path_traversal_blocked(temp_dir):
+    """T-R2-SEC-CWE22: Path traversal guard blocks escaping skill directory during completion."""
+    from skill_manager.models import AuditResult
+    skill_dir = temp_dir / "my_skill"
+    skill_dir.mkdir()
+    (skill_dir / "SKILL.md").write_text("# My Skill\n", encoding="utf-8")
+
+    malicious_audit = AuditResult(
+        is_compliant=False,
+        missing_fields=[],
+        missing_sections=["Actions"],
+        missing_dirs=["../../escaped_dir"],
+        diff_content=None,
+    )
+
+    with patch("skill_manager.core.indexer.audit_skill", return_value=malicious_audit):
+        with pytest.raises(ValueError, match="PATH_TRAVERSAL_BLOCKED"):
+            complete_skill(skill_dir, dry_run=False)
+
+

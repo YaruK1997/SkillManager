@@ -353,3 +353,22 @@ def test_complete_skills_skip_installed_and_skeleton_permission_error(sample_wor
         complete_workflow_skills(audit_single, target_dir=temp_dir / "out_skel", dry_run=False)
 
 
+@pytest.mark.r2
+def test_security_workflow_skill_name_path_traversal_blocked(temp_dir):
+    """T-R2-SEC-CWE22-WF: Block malicious path traversal strings in workflow skill definitions."""
+    wf_path = temp_dir / "malicious_wf.md"
+    wf_path.write_text(
+        "# Malicious Workflow\n"
+        "- skills/../../../escaped/SKILL.md\n"
+        "- skills/..\\..\\windows_escaped/SKILL.md\n"
+        "- `../../evil_skill`\n"
+        "- 綁定技能：/absolute/root/skill, legitimate-skill\n",
+        encoding="utf-8",
+    )
+    skills = parse_workflow_requirements(wf_path)
+    # Malicious path traversals should be discarded by regex validation
+    assert "legitimate-skill" in skills
+    assert not any(".." in s or "/" in s or "\\" in s for s in skills)
+
+
+

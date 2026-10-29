@@ -198,13 +198,13 @@ R3 負責驗證跨模組端到端（End-to-End）整合流程、乾淨環境全�
 | `tests/unit/test_remote_search.py` | `r1` (2) / `r2` (3) | 5 | 驗證 `FR-02` GitHub 與 HuggingFace 搜尋解析、關鍵字長度邊界、HTTP 429 速率限制與 `limit=50` 收斂。 |
 | `tests/unit/test_indexer.py` | `r1` (3) / `r2` (2) | 5 | 驗證 `FR-03` `index.md` 規則解析、缺失章節/目錄審計、自動補全、空白 `index.md` 與空目錄攔截。 |
 | `tests/unit/test_versioning.py` | `r1` (2) / `r2` (2) | 4 | 驗證 `FR-04` Git `BEHIND` 狀態偵測、升級前快照備份標籤、版本回滾、Dirty Worktree 防護與非 Git 目錄攔截。 |
-| `tests/unit/test_cli.py` | `r1` (4) / `r2` (1) | 5 | 驗證 `FR-05` 與 `FR-06` CLI `--format json` 純淨輸出、`audit`/`complete`/`workflow-audit`/`healthcheck` 指令與未知子指令錯誤碼。 |
-| `tests/unit/test_workflow_auditor.py` | `r1` (6) / `r2` (9) | 15 | 驗證 `FR-06` `workflow.md` 技能需求解析、別名正規化、就緒狀態分類、來源庫複製與骨架補全、超大檔案/亂碼/權限拒絕/原子寫入防禦。 |
-| `tests/unit/test_r2_boundaries.py` | `r2` (15) | 15 | 集中驗證 `FR-01`–`FR-04` 極限邊界與故障注入（權限拒絕、串流大量目錄、併發刪檔、純空白查詢、非 JSON 回應、網路逾時退避、401 鑑權、50MB 檔案防護、原子寫入、Git 損毀、CWE-88 參數注入攔截）。 |
+| `tests/unit/test_cli.py` | `r1` (7) / `r2` (2) | 9 | 驗證 `FR-05` 與 `FR-06` CLI `--format json` 純淨輸出、`config` 指令、`scan` 參數別名、`audit` 權限阻擋、`track` 逾時狀態碼、`healthcheck` 指令與未知子指令錯誤碼。 |
+| `tests/unit/test_workflow_auditor.py` | `r1` (6) / `r2` (10) | 16 | 驗證 `FR-06` `workflow.md` 技能需求解析、別名正規化、就緒狀態分類、來源庫複製與骨架補全、超大檔案/亂碼/權限拒絕/原子寫入防禦、CWE-22 路徑周遊防禦。 |
+| `tests/unit/test_r2_boundaries.py` | `r2` (17) | 17 | 集中驗證 `FR-01`–`FR-04` 極限邊界與故障注入（權限拒絕、串流大量目錄、併發刪檔、純空白查詢、非 JSON 回應、網路逾時退避、401 鑑權、50MB 檔案防護、原子寫入、Git 損毀、Detached HEAD/No-Remote、CWE-88 參數注入攔截、CWE-22 目錄逃逸攔截）。 |
 | `tests/unit/test_more_coverage.py` | `r1` (13) / `r2` (4) | 17 | 補足 5 大核心模組分支覆蓋率（≥ 90%），涵蓋多平台路徑推論、HTTP 500 重試、AHEAD/DIVERGED 分支、Detached HEAD、深層掃描邊界與回滾異常分支。 |
-| `tests/unit/test_cli_workflow.py` | `r1` (2) / `r2` (3) | 5 | 驗證 `FR-05` 與 `FR-06` CLI `workflow-audit` 表格與 JSON 輸出、自動補全、缺少檔案與非法平台異常。 |
+| `tests/unit/test_cli_workflow.py` | `r1` (2) / `r2` (4) | 6 | 驗證 `FR-05` 與 `FR-06` CLI `workflow-audit` 表格與 JSON 輸出、自動補全、目標路徑持久化探測、缺少檔案與非法平台異常。 |
 | `tests/integration/test_e2e_workflow.py` | `r3` (2) | 2 | 驗證 `R3` 端到端完整生命週期（`scan -> audit -> complete -> audit` 及 `workflow-audit --auto-complete`）。 |
-| **總計** | **R1: 40 / R2: 43 / R3: 2** | **85** | **100% 覆蓋 `docs/01_spec.md` 全部 57 項追溯矩陣條目與 R3 整合驗收** |
+| **總計** | **R1: 43 / R2: 48 / R3: 2** | **93** | **100% 覆蓋 `docs/01_spec.md` 全部 57 項追溯矩陣條目與 R3 整合驗收** |
 
 ---
 
