@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "skill-manager"
-version = "0.1.0"
+version = "0.2.0"
 description = "Cross-platform Local AI Skills & Plugins Manager"
 readme = "README.md"
 requires-python = ">=3.15"

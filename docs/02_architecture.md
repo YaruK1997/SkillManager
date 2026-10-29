@@ -10,7 +10,7 @@
 +-------------------------------------------------------------------------------+
 
   [ 介面層 (Presentation Layer) ]
-   └── skill_manager.cli: Typer CLI 入口 (scan, search, audit, complete, track)
+   └── skill_manager.cli: Typer CLI 入口 (scan, search, audit, complete, track, workflow-audit)
         ├── Table 格式化輸出 (Rich Console)
         └── 結構化 JSON 輸出 (乾淨無 ANSI 色碼，供 AI Agent 直接調用)
               |
@@ -23,10 +23,11 @@
               |
               v
   [ 核心領域層 (Core Domain Layer) ]
-   ├── core.scanner:      os.scandir 串流遍歷、YAML Frontmatter 解析、循環連結防護
-   ├── core.remote_search: GitHub REST API 與 HuggingFace Hub 檢索 (指數退避重試)
-   ├── core.indexer:      index.md 規範審計器、Unified Diff 生成器、原子寫入引擎
-   └── core.versioning:   GitPython 封裝、SHA 狀態比對、快照標籤備份、一鍵回滾
+   ├── core.scanner:          os.scandir 串流遍歷、YAML Frontmatter 解析、循環連結防護
+   ├── core.remote_search:     GitHub REST API 與 HuggingFace Hub 檢索 (指數退避重試)
+   ├── core.indexer:          index.md 規範審計器、Unified Diff 生成器、原子寫入引擎
+   ├── core.versioning:       GitPython 封裝、SHA 狀態比對、快照標籤備份、一鍵回滾
+   └── core.workflow_auditor: 工作流技能依賴解析、本機庫就緒審計與自動補全引擎
               |
               v
   [ 實體與模型層 (Data & Entity Layer) ]
@@ -34,6 +35,8 @@
         ├── SkillEntity, ScanResult, ScanSummary
         ├── SearchItem, SearchResult
         ├── AuditResult, TrackResult
+        ├── WorkflowSkillStatus, WorkflowSkillRequirement
+        ├── WorkflowAuditResult, WorkflowCompleteResult
         └── PlatformType, VersionStatus (嚴格 Enum 列舉)
 ```
 
@@ -96,6 +99,27 @@ Skill Git Repo
      │
      ▼ (若需還原)
 [versioning.rollback_skill] ──► 一鍵還原至前次快照標籤
+```
+
+### 2.4 啟動時工作流技能審計與自動補全資料流 (Workflow Audit & Auto-Completion Flow)
+```text
+Workflow Spec (workflow.md / SessionStart Hook)
+     │
+     ▼
+[cli.workflow_audit] ──► [workflow_auditor.parse_workflow_requirements]
+                              │ (正則解析技能標記、相對路徑與別名)
+                              ▼
+                       [workflow_auditor.audit_workflow_skills]
+                              ├─► 調用 [scanner.scan_skills] 獲取已安裝技能集
+                              ├─► 調用 [indexer.audit_skill] 檢驗現存技能合規性
+                              └─► 產出 [WorkflowAuditResult]
+                                    (INSTALLED / MISSING / INCOMPLETE)
+                              │
+                              ▼ (若啟用 --auto-complete)
+                       [workflow_auditor.complete_workflow_skills]
+                              ├─► 備用來源複製 (skill-packs/ 或本機共用目錄)
+                              ├─► 缺失技能呼叫 [indexer.complete_skill] 產生標準骨架
+                              └─► 產出 [WorkflowCompleteResult] (Unified Diff & 變更清單)
 ```
 
 ---

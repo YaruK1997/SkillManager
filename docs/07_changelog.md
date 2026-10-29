@@ -1,5 +1,20 @@
 # SkillManager 變更日誌 (docs/07_changelog.md)
 
+## [0.2.0] - 2026-10-29
+
+### Added (新增功能)
+- **工作流所需技能審計與啟動自動補全 (`core.workflow_auditor`) (FR-06)**：
+  - **工作流需求解析 (`parse_workflow_requirements`)**：精準解析各類 Markdown 工作流程規範（如 `workflow.md`、`AGENTS.md`），識別章節技能綁定、路徑參照（`skills/<name>/SKILL.md`）與表格配置，並自動過濾非技能標題與符號。
+  - **多來源搜尋與鏡像比對 (`find_skill_in_sources`)**：支援指定多個本地來源目錄（如 `skill-packs/`、`ai-tooling/skills` 等），比對同名技能目錄。
+  - **跨平台狀態審計 (`audit_workflow_skills`)**：自動探測指定平台全域技能目錄（Antigravity、Claude、Codex、Cursor）或自訂目標目錄，審查工作流所需技能之安裝與完備狀態（`AVAILABLE`、`MISSING`、`INCOMPLETE`、`INVALID`）。
+  - **自動補全與骨架生成 (`complete_workflow_skills`)**：支援從來源目錄自動複製現有技能套件；若來源不存在，則聯動 `core.indexer` 自動生成標準 `SKILL.md` 骨架與結構目錄，實現啟動時零技能缺漏阻礙。
+  - **模擬演練防護 (`dry-run`)**：完整支援 `--dry-run` 模式，預覽變更動作與差量，確保檔案系統寫入安全性。
+- **CLI 指令擴增 (`cli.workflow-audit`)**：
+  - 新增 `skill-manager workflow-audit` 指令，提供 `--workflow`、`--platform`、`--target-dir`、`--source`、`--auto-complete`、`--dry-run` 及 `--format table|json` 等完整參數支援。
+- **架構與自測交付**：
+  - 更新 `docs/01_spec.md` (FR-06 / AC-06-01~06 / EC-06-01~07)、`docs/01_plan.md`、`docs/01_spec_review.md` 與 `docs/02_architecture.md`。
+  - 新增 20 個單元與整合測試用例，全專案測試覆蓋率達 86%（核心審計模組達 90%）。
+
 ## [0.1.0] - 2026-10-23
 
 ### Added (新增功能)

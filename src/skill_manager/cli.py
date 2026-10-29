@@ -27,7 +27,11 @@ from skill_manager.core.versioning import (
     rollback_skill,
     upgrade_skill,
 )
-from skill_manager.models import PlatformType, VersionStatus
+from skill_manager.core.workflow_auditor import (
+    audit_workflow_skills,
+    complete_workflow_skills,
+)
+from skill_manager.models import PlatformType, VersionStatus, WorkflowSkillStatus
 
 app = typer.Typer(
     name="skill-manager",
@@ -266,6 +270,108 @@ def track(
         console.print(table)
 
     _output(res.model_dump(), format, render)
+    raise typer.Exit(code=0)
+
+
+@app.command(name="workflow-audit")
+def workflow_audit_cmd(
+    workflow: Optional[str] = typer.Option(None, "--workflow", "-w", help="Workflow specification file path (default: auto-detected workflow.md)"),
+    platform: str = typer.Option("all", "--platform", "-p", help="Target platform (claude, antigravity, codex, cursor, universal, all)"),
+    target_dir: Optional[str] = typer.Option(None, "--target-dir", "-t", help="Directory where missing skills will be installed/created"),
+    sources: Optional[List[str]] = typer.Option(None, "--source", "-s", help="Candidate directories to copy existing skills from"),
+    auto_complete: bool = typer.Option(False, "--auto-complete", "-a", help="Automatically complete missing or incomplete skills"),
+    dry_run: bool = typer.Option(True, "--dry-run/--no-dry-run", help="Whether to simulate changes without disk write"),
+    format: str = typer.Option("table", "--format", "-f", help="Output format: table or json"),
+    config: Optional[str] = typer.Option(None, "--config", "-c", help="Config file path"),
+):
+    """Audit installed skills against current workflow requirements and optionally auto-complete."""
+    try:
+        plat_enum = PlatformType(platform.lower())
+    except ValueError:
+        err_console.print(f"[bold red]VALIDATION_ERROR:[/bold red] Invalid platform '{platform}'.")
+        raise typer.Exit(code=2)
+
+    cfg = load_config(config)
+    wf_path = Path(workflow).resolve() if workflow else None
+    t_dir = Path(target_dir).resolve() if target_dir else None
+    src_dirs = [Path(s).resolve() for s in sources] if sources else None
+
+    try:
+        audit_res = audit_workflow_skills(
+            workflow_path=wf_path,
+            platform=plat_enum,
+            config=cfg,
+        )
+    except FileNotFoundError as fnf:
+        err_console.print(f"[bold red]ERR_WORKFLOW_NOT_FOUND:[/bold red] {fnf}")
+        raise typer.Exit(code=2)
+    except ValueError as ve:
+        err_console.print(f"[bold red]{ve}[/bold red]")
+        raise typer.Exit(code=2)
+
+    # Perform auto-completion if requested
+    if auto_complete:
+        try:
+            comp_res = complete_workflow_skills(
+                audit_result=audit_res,
+                target_dir=t_dir,
+                skill_sources=src_dirs,
+                dry_run=dry_run,
+            )
+            audit_res.completion_result = comp_res
+        except PermissionError as pe:
+            err_console.print(f"[bold red]{pe}[/bold red]")
+            raise typer.Exit(code=5)
+
+    def render():
+        table = Table(title=f"Workflow Skills Audit: {Path(audit_res.workflow_path).name}")
+        table.add_column("Skill Name", style="bold green")
+        table.add_column("Status", style="bold")
+        table.add_column("Details", style="dim")
+
+        if audit_res.total_required == 0:
+            console.print("[yellow]NO_SKILL_REQUIREMENTS_FOUND: No skill references detected in workflow file.[/yellow]")
+            return
+
+        for req in audit_res.skills:
+            if req.status == WorkflowSkillStatus.INSTALLED:
+                status_display = "[bold green]INSTALLED[/bold green]"
+                detail = req.installed_path or ""
+            elif req.status == WorkflowSkillStatus.INCOMPLETE:
+                status_display = "[bold yellow]INCOMPLETE[/bold yellow]"
+                missing = []
+                if req.missing_sections:
+                    missing.append(f"sections: {', '.join(req.missing_sections)}")
+                if req.missing_dirs:
+                    missing.append(f"dirs: {', '.join(req.missing_dirs)}")
+                detail = f"Missing {'; '.join(missing)}"
+            else:
+                status_display = "[bold red]MISSING[/bold red]"
+                detail = "Not found in local skills directories"
+
+            table.add_row(req.name, status_display, detail)
+
+        console.print(table)
+        console.print(
+            f"Summary: Total: {audit_res.total_required} | "
+            f"Installed: [green]{audit_res.installed_count}[/green] | "
+            f"Incomplete: [yellow]{audit_res.incomplete_count}[/yellow] | "
+            f"Missing: [red]{audit_res.missing_count}[/red]"
+        )
+
+        if audit_res.completion_result:
+            comp = audit_res.completion_result
+            mode = "[yellow](DRY RUN)[/yellow]" if comp.dry_run else "[green](APPLIED)[/green]"
+            console.print(f"\nAuto-Completion {mode}:")
+            if comp.completed_skills:
+                console.print(f"Completed skills: {', '.join(comp.completed_skills)}")
+            if comp.created_skeletons:
+                console.print(f"Generated skeletons: {', '.join(comp.created_skeletons)}")
+            if comp.diff_summary:
+                console.print("\n[bold]Diff Summary:[/bold]")
+                console.print(comp.diff_summary)
+
+    _output(audit_res.model_dump(), format, render)
     raise typer.Exit(code=0)
 
 

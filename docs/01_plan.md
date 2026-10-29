@@ -115,11 +115,25 @@ Skill-manager/
 
 ---
 
+### 任務群組 7：工作流技能審計與啟動自動補全 (TASK-06 - 支援 FR-06)
+- **目標**：解析 `workflow.md` 所需技能依賴，比對本機各平台已安裝技能庫，並支援自備用來源或 indexer 骨架自動補全。
+- **子任務**：
+  - `TASK-06-01`：在 `src/skill_manager/models.py` 新增 `WorkflowSkillStatus`、`WorkflowSkillRequirement`、`WorkflowAuditResult`、`WorkflowCompleteResult` 資料類別。
+  - `TASK-06-02`：編寫 `src/skill_manager/core/workflow_auditor.py` 之 `parse_workflow_requirements`，使用正規表達式與 Markdown 標題掃描提取技能引用。
+  - `TASK-06-03`：實作 `audit_workflow_skills`，結合 `core.scanner` 與 `core.indexer` 比對已安裝技能名稱與結構完整性（判定 `INSTALLED`、`MISSING`、`INCOMPLETE`）。
+  - `TASK-06-04`：實作 `complete_workflow_skills`，支援自指定備用來源目錄複製技能檔案，或利用 `core.indexer.complete_skill` 產生標準補全骨架，支援 `--dry-run` 模擬輸出與原子寫入。
+  - `TASK-06-05`：在 `src/skill_manager/cli.py` 註冊 `workflow-audit` 子指令，整合 Rich 終端表格渲染與 `--format json` 輸出，提供 `--auto-complete`、`--dry-run/--no-dry-run`、`--source` 等旗標。
+- **對應測試 ID**：`T-R1-AC-06-01`, `T-R1-AC-06-02`, `T-R1-AC-06-03`, `T-R2-AC-06-04`, `T-R2-AC-06-05`, `T-R2-AC-06-06`, `T-R2-EC-06-01`, `T-R2-EC-06-02`, `T-R2-EC-06-03`, `T-R2-EC-06-05`, `T-R2-EC-06-06`, `T-R2-EC-06-07`。
+- **驗證方式**：編寫單元測試 `tests/unit/test_workflow_auditor.py` 與 CLI 整合測試 `tests/unit/test_cli_workflow.py`。
+
+---
+
 ## 4. 階段 2 實作與驗證時程檢核點
 
 1. **里程碑 1**：TASK-00 與 TASK-01 完成，本機目錄多平台掃描與 JSON 輸出通過單元測試（耗時門檻驗證 ≤ 1500 ms）。
 2. **里程碑 2**：TASK-02 完成，GitHub 與 HuggingFace API 檢索與重試防禦通過測試。
 3. **里程碑 3**：TASK-03 完成，依據 `index.md` 之審計與原子補全通過測試。
 4. **里程碑 4**：TASK-04 與 TASK-05 完成，Git 版本比對、升級快照與完整 CLI 介面整合。
-5. **里程碑 5**：全量自動化測試執行，行覆蓋率達到 ≥ 80%，核心模組達到 ≥ 90%。
+5. **里程碑 5**：TASK-06 完成，工作流技能依賴解析、比對、自動補全與 CLI `workflow-audit` 整合通過測試。
+6. **里程碑 6**：全量自動化測試執行，行覆蓋率達到 ≥ 80%，核心模組達到 ≥ 90%。
 

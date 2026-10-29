@@ -94,3 +94,44 @@ class TrackResult(BaseModel):
     behind_count: int = 0
     diff_summary: Optional[str] = None
 
+
+class WorkflowSkillStatus(str, Enum):
+    """Readiness status of a required workflow skill."""
+    INSTALLED = "INSTALLED"
+    MISSING = "MISSING"
+    INCOMPLETE = "INCOMPLETE"
+
+
+class WorkflowSkillRequirement(BaseModel):
+    """Represents a skill requirement declared in workflow documentation."""
+    name: str = Field(..., description="Unique skill name or identifier")
+    status: WorkflowSkillStatus = Field(default=WorkflowSkillStatus.MISSING, description="Current installation readiness")
+    installed_path: Optional[str] = Field(default=None, description="Absolute local path if installed")
+    source_path: Optional[str] = Field(default=None, description="Path where skill was restored/copied from")
+    missing_sections: List[str] = Field(default_factory=list, description="Missing sections in SKILL.md if incomplete")
+    missing_dirs: List[str] = Field(default_factory=list, description="Missing subdirectories if incomplete")
+    description: Optional[str] = Field(default="", description="Skill purpose or workflow context")
+
+
+class WorkflowCompleteResult(BaseModel):
+    """Result of an automated workflow skills completion operation."""
+    success: bool = True
+    dry_run: bool = True
+    completed_skills: List[str] = Field(default_factory=list, description="Names of skills completed or installed")
+    created_skeletons: List[str] = Field(default_factory=list, description="Names of skills generated from indexer skeleton")
+    modified_files: List[str] = Field(default_factory=list, description="List of all files created or updated")
+    diff_summary: Optional[str] = Field(default=None, description="Consolidated unified diff of all changes")
+
+
+class WorkflowAuditResult(BaseModel):
+    """Comprehensive audit report comparing workflow requirements against local installation."""
+    workflow_path: str = Field(..., description="Path of the audited workflow document")
+    total_required: int = 0
+    installed_count: int = 0
+    missing_count: int = 0
+    incomplete_count: int = 0
+    is_fully_satisfied: bool = False
+    skills: List[WorkflowSkillRequirement] = Field(default_factory=list)
+    completion_result: Optional[WorkflowCompleteResult] = Field(default=None)
+
+

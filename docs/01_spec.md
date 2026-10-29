@@ -172,7 +172,7 @@ SkillManager 為一套跨平台（支援 Windows、macOS、Linux）全域 AI 技
 - **功能描述**：提供具備結構化 JSON 輸出旗標之 CLI 介面，支援設定檔（`config.toml`）管理各平台目錄自訂映射與 API 憑證。
 - **輸入項目**：
   - 全域參數：`--format`（可選：`table`、`json`，預設為 `table`）、`--config`（設定檔路徑）。
-  - 子指令：`scan`、`search`、`audit`、`complete`、`track`、`config`。
+  - 子指令：`scan`、`search`、`audit`、`complete`、`track`、`config`、`workflow-audit`。
 - **輸出項目**：
   - 終端控制台渲染表格，或標準 stdout 結構化 JSON 字串；執行狀態碼（0 為成功，非 0 為具體定義之錯誤碼）。
 
@@ -189,6 +189,52 @@ SkillManager 為一套跨平台（支援 Windows、macOS、Linux）全域 AI 技
   - **Given**：輸入未定義之子指令（例如 `skill-manager fly`）。
   - **When**：CLI 接收指令。
   - **Then**：回傳退出碼 2，輸出標準 Help 指引資訊至 stderr。
+
+---
+
+### FR-06: 啟動時工作流所需技能審計與自動補全
+- **功能描述**：在系統啟動或工作階段初始化時，主動解析工作流程定義文件（預設 `./workflow.md`、`.agents/workflow.md` 或指定文件），提取宣告綁定與調用之技能清單。比對本機已安裝技能庫，判定每項技能之就緒狀態（`INSTALLED`、`MISSING`、`INCOMPLETE`），並支援從備用技能庫（如 `skill-packs/`、本機共用目錄）自動複製補全或調用 indexer 引擎生成標準骨架，確保開發環境所需技能 100% 齊備。
+- **輸入項目**：
+  - `workflow_file`（字串，工作流規格文件路徑，未指定時自動探測 `./workflow.md`、`workflow.md`）。
+  - `platform`（字串，目標平台：`antigravity`、`claude`、`codex`、`cursor`、`all`，預設為 `all`）。
+  - `target_dir`（字串，補全目標路徑，未指定時預設安裝至專案 `.agents/skills` 或全域技能目錄）。
+  - `skill_sources`（字串陣列，備用技能來源目錄清單）。
+  - `auto_complete`（布林值，是否自動執行補全安裝，預設為 `false`）。
+  - `dry_run`（布林值，補全時是否僅輸出變更預覽而不寫入磁碟，預設為 `true`）。
+- **輸出項目**：
+  - `workflow_path`（字串，解析之工作流檔案路徑）。
+  - `total_required`（整數，工作流所需技能總數）。
+  - `installed_count`（整數，已安裝且完整之技能數）。
+  - `missing_count`（整數，缺失之技能數）。
+  - `incomplete_count`（整數，存在但章節結構不合規之技能數）。
+  - `skills`（陣列，每筆包含：`name`、`status`、`installed_path`、`missing_sections`、`missing_dirs`）。
+  - `completion_summary`（物件，可選：`completed_skills`、`modified_files`、`dry_run`）。
+
+#### 驗收標準 (Acceptance Criteria, AC)
+- **AC-06-01 (正常)**：
+  - **Given**：專案根目錄存在宣告技能依賴之 `workflow.md`。
+  - **When**：執行 `skill-manager workflow-audit --workflow ./workflow.md --format json`。
+  - **Then**：系統回傳退出碼 0，JSON 結構內包含 `total_required` 與 `skills` 項目，正確標註 `INSTALLED`、`MISSING` 或 `INCOMPLETE`。
+- **AC-06-02 (正常)**：
+  - **Given**：審計結果發現缺失技能，且使用者提供備用來源目錄並指定 `--auto-complete --no-dry-run`。
+  - **When**：執行自動補全。
+  - **Then**：系統自動自來源目錄複製對應技能資料夾或生成合規骨架，寫入至目標目錄，回傳退出碼 0，且再次審計該技能狀態變更為 `INSTALLED`。
+- **AC-06-03 (正常)**：
+  - **Given**：審計發現缺失技能，執行帶有 `--auto-complete --dry-run`。
+  - **When**：執行補全指令。
+  - **Then**：系統僅輸出預計複製或產出之檔案清單與 Diff，不異動任何磁碟檔案，回傳退出碼 0。
+- **AC-06-04 (異常)**：
+  - **Given**：使用者指定不存在之工作流檔案路徑（如 `--workflow ./not_found.md`）。
+  - **When**：發起工作流審計。
+  - **Then**：系統終止操作，stderr 輸出 `ERR_WORKFLOW_NOT_FOUND`，回傳退出碼 2。
+- **AC-06-05 (異常)**：
+  - **Given**：指定之 `workflow.md` 為空檔案，或未含有任何技能標記。
+  - **When**：執行審計。
+  - **Then**：系統安全回傳退出碼 0，`total_required` 為 0，輸出提示 `NO_SKILL_REQUIREMENTS_FOUND`。
+- **AC-06-06 (異常)**：
+  - **Given**：自動補全寫入之目標資料夾為唯讀或無寫入權限。
+  - **When**：執行 `--auto-complete --no-dry-run`。
+  - **Then**：系統攔截權限異常，終止寫入，回傳退出碼 5，stderr 輸出 `WRITE_PERMISSION_DENIED: <path>`。
 
 ---
 
@@ -209,6 +255,7 @@ SkillManager 為一套跨平台（支援 Windows、macOS、Linux）全域 AI 技
     2. `core.indexer`（`index.md` 語法解析、規則審計器與模板渲染器）
     3. `core.versioning`（Git 狀態檢查器、快照備份器與回滾控制器）
     4. `core.remote_search`（GitHub 與 HuggingFace API 請求轉換與結果標準化解析器）
+    5. `core.workflow_auditor`（工作流技能需求解析、就緒審計與自動補全引擎）
 - **NFR-05 (資源消耗限制)**：
   - 執行批次掃描或版本更新時，系統常駐記憶體（RSS）峰值不得超過 128 MB。
 
@@ -248,6 +295,13 @@ SkillManager 為一套跨平台（支援 Windows、macOS、Linux）全域 AI 技
 | **EC-04-05** | FR-04 | 資料遺失 | 升級過程遇到衝突覆蓋未備份檔案 | **拒絕**：未提交變更時拒絕執行，強制要求備份或暫存（Stash），確保 0 資料遺失 |
 | **EC-04-06** | FR-04 | 併發衝突 | Git index.lock 正在被其他 Git 程序佔用 | **回報錯誤**：偵測到 `index.lock` 時暫停 500 ms，若仍佔用則回報 `GIT_INDEX_LOCKED` |
 | **EC-04-07** | FR-04 | 權限不足 | 存取需 SSH Key 或 Private Token 之私有遠端倉庫 | **回報錯誤**：攔截驗證錯誤，提示 `REMOTE_AUTH_FAILED` |
+| **EC-06-01** | FR-06 | 空值 | 指定之 `workflow.md` 為 0 byte 空白檔案 | **降級**：回傳空需求陣列，`total_required=0`，退出碼 0 |
+| **EC-06-02** | FR-06 | 極大值 | `workflow.md` 包含超過 1,000 條技能定義，或檔案大小 > 5 MB | **拒絕**：檔案大小 > 5 MB 拒絕載入並提示 `WORKFLOW_FILE_TOO_LARGE`；正常大小則串流解析去重 |
+| **EC-06-03** | FR-06 | 非法格式 | `workflow.md` 包含無效字元編碼或無法辨識之 Markdown 語法 | **降級**：以 UTF-8 `replace` 模式容錯讀取，略過無法解析之章節 |
+| **EC-06-04** | FR-06 | 網路逾時 | N/A | 本功能優先執行本機目錄比對與複製，無遠端網路阻斷相依 |
+| **EC-06-05** | FR-06 | 資料遺失 | 自動補全目標目錄已存在同名但客製化技能 | **拒絕**：若目標已存在 `SKILL.md`，僅補齊缺失章節，絕不覆寫原有內容，確保 0 資料遺失 |
+| **EC-06-06** | FR-06 | 併發衝突 | 多個行程同時發起補全寫入同一個技能資料夾 | **回報錯誤**：寫入前採用 PID 隔離暫存檔與原子置換，防止寫入碰撞 |
+| **EC-06-07** | FR-06 | 權限不足 | 自動補全寫入目標為唯讀目錄或無權限存取 | **回報錯誤**：攔截 `PermissionError`，終止寫入，回傳退出碼 5，提示 `WRITE_PERMISSION_DENIED` |
 
 ---
 
@@ -260,6 +314,7 @@ SkillManager 為一套跨平台（支援 Windows、macOS、Linux）全域 AI 技
 | **FR-03 (結構審計與補全)** | **已決**：統一採用 UTF-8 編碼與 LF/CRLF 自動相容解析。 | **已決**：僅解析 Markdown 標題層級與 YAML 頭部，不解析全文正文，維持極低運算耗時。 | **無衝突**：純本機檔案操作。 | **已決**：Indexer 模組屬於核心模組，覆蓋率門檻 ≥ 90%。 | **已決**：限制單一檔案大小小於 50 MB，讀取時採用逐行解析。 |
 | **FR-04 (版本追蹤更新)** | **已決**：封裝標準 Git CLI 與 GitPython，相容各平台 Git 路徑。 | **已決**：僅抓取 Commit SHA 元數據，不抓取全量物件樹（Tree Object）。 | **已決**：Git Fetch 設定逾時門檻 15 秒，逾時後終止網路連線並重試 1 次。 | **已決**：Versioning 模組屬於核心模組，覆蓋率門檻 ≥ 90%。 | **已決**：Diff 比對使用串流比對，記憶體耗用小於 10 MB。 |
 | **FR-05 (CLI 與配置)** | **已決**：CLI 引數採用標準 POSIX 相容語法，各平台解析一致。 | **無衝突**：CLI 框架啟動時間小於 100 ms。 | **無衝突**：配置管理為純本機讀寫。 | **已決**：CLI 介面層設定覆蓋率門檻 ≥ 80%。 | **已決**：Rich 渲染器於非 TTY 模式自動降級為純文字，避免渲染暫存區過大。 |
+| **FR-06 (工作流技能審計補全)** | **已決**：相容 Windows、macOS 與 Linux 路徑，解析工作流檔案無平台鎖定。 | **已決**：正則預熱快取比對，50 個技能解析與本機比對 ≤ 800 ms。 | **無衝突**：優先採用本機檔案比對與複製，無遠端網路相依。 | **已決**：Workflow Auditor 模組納入核心模組清單，覆蓋率門檻 ≥ 90%。 | **已決**：解析工作流採用串流逐行掃描，記憶體增量小於 15 MB。 |
 
 ---
 
@@ -386,3 +441,15 @@ SkillManager 為一套跨平台（支援 Windows、macOS、Linux）全域 AI 技
 | **FR-05** | AC-05-01 | 正常 | TASK-05-CLI-JSON-OUTPUT | `T-R1-AC-05-01` |
 | **FR-05** | AC-05-02 | 正常 | TASK-05-CONFIG-PATH-MAPPING | `T-R1-AC-05-02` |
 | **FR-05** | AC-05-03 | 異常 | TASK-05-CLI-SUBCOMMAND-ERROR | `T-R2-AC-05-03` |
+| **FR-06** | AC-06-01 | 正常 | TASK-06-WORKFLOW-AUDITOR-CORE | `T-R1-AC-06-01` |
+| **FR-06** | AC-06-02 | 正常 | TASK-06-WORKFLOW-AUTO-COMPLETE | `T-R1-AC-06-02` |
+| **FR-06** | AC-06-03 | 正常 | TASK-06-WORKFLOW-DRY-RUN | `T-R1-AC-06-03` |
+| **FR-06** | AC-06-04 | 異常 | TASK-06-WORKFLOW-MISSING-FILE | `T-R2-AC-06-04` |
+| **FR-06** | AC-06-05 | 異常 | TASK-06-WORKFLOW-EMPTY-FILE | `T-R2-AC-06-05` |
+| **FR-06** | AC-06-06 | 異常 | TASK-06-WORKFLOW-WRITE-GUARD | `T-R2-AC-06-06` |
+| **FR-06** | EC-06-01 | 異常 | TASK-06-WORKFLOW-EMPTY-DIR | `T-R2-EC-06-01` |
+| **FR-06** | EC-06-02 | 異常 | TASK-06-WORKFLOW-LARGE-FILE | `T-R2-EC-06-02` |
+| **FR-06** | EC-06-03 | 異常 | TASK-06-WORKFLOW-CORRUPT-CHAR | `T-R2-EC-06-03` |
+| **FR-06** | EC-06-05 | 異常 | TASK-06-WORKFLOW-PRESERVE-SKILL | `T-R2-EC-06-05` |
+| **FR-06** | EC-06-06 | 異常 | TASK-06-WORKFLOW-ATOMIC-REPLACE | `T-R2-EC-06-06` |
+| **FR-06** | EC-06-07 | 異常 | TASK-06-WORKFLOW-PERM-DENIED | `T-R2-EC-06-07` |
