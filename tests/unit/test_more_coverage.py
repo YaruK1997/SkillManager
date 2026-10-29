@@ -37,8 +37,9 @@ from skill_manager.models import PlatformType, VersionStatus
 runner = CliRunner()
 
 
+@pytest.mark.r1
 def test_scanner_with_git_and_platforms(temp_dir):
-    """Cover git detection inside scanner and platform inference."""
+    """T-R1-AC-01-01 (Source: AC-01-01): Cover git detection inside scanner and platform inference."""
     claude_dir = temp_dir / ".claude" / "skills" / "claude-skill"
     claude_dir.mkdir(parents=True)
     (claude_dir / "SKILL.md").write_text("---\nname: claude-skill\n---\n# Claude\n", encoding="utf-8")
@@ -62,8 +63,9 @@ def test_scanner_with_git_and_platforms(temp_dir):
     assert any(s.platform == PlatformType.CLAUDE for s in res.skills)
 
 
+@pytest.mark.r2
 def test_scanner_large_file_and_missing_end_delimiter(temp_dir):
-    """Cover large file skip and unclosed YAML delimiter."""
+    """T-R2-EC-03-03 (Source: EC-03-03): Cover large file skip and unclosed YAML delimiter."""
     f_unclosed = temp_dir / "unclosed.md"
     f_unclosed.write_text("---\nname: unclosed\nNo closing delimiter", encoding="utf-8")
     meta, body = parse_yaml_frontmatter(f_unclosed)
@@ -71,9 +73,10 @@ def test_scanner_large_file_and_missing_end_delimiter(temp_dir):
     assert "No closing delimiter" in body
 
 
+@pytest.mark.r1
 @respx.mock
 def test_remote_search_retry_and_headers():
-    """Cover retry on HTTP 500, auth headers, and sorting."""
+    """T-R1-AC-02-01 (Source: AC-02-01): Cover retry on HTTP 500, auth headers, and sorting."""
     # Test headers
     gh_h = _build_github_headers(token="gh_test_123")
     assert gh_h["Authorization"] == "Bearer gh_test_123"
@@ -94,9 +97,10 @@ def test_remote_search_retry_and_headers():
         assert res.items[0].repo_id == "owner/repo"
 
 
+@pytest.mark.r2
 @respx.mock
 def test_remote_search_hf_error():
-    """Cover HuggingFace non-200 and invalid json."""
+    """T-R2-EC-02-03 (Source: EC-02-03): Cover HuggingFace non-200 and invalid json."""
     respx.get("https://huggingface.co/api/spaces").respond(status_code=503)
 
     with httpx.Client() as client:
@@ -104,8 +108,9 @@ def test_remote_search_hf_error():
         assert len(res.items) == 0
 
 
+@pytest.mark.r1
 def test_indexer_coverage_details(temp_dir):
-    """Cover skeleton generation from scratch and dry run."""
+    """T-R1-AC-03-02 (Source: AC-03-02): Cover skeleton generation from scratch and dry run."""
     empty_skill = temp_dir / "fresh-skill"
     empty_skill.mkdir()
     (empty_skill / "placeholder.txt").write_text("exists", encoding="utf-8")
@@ -122,8 +127,9 @@ def test_indexer_coverage_details(temp_dir):
     assert (empty_skill / "SKILL.md").exists()
 
 
+@pytest.mark.r1
 def test_versioning_ahead_and_diverged(git_repo_with_remote, temp_dir):
-    """Cover AHEAD and DIVERGED status in versioning."""
+    """T-R1-AC-04-01 (Source: AC-04-01): Cover AHEAD and DIVERGED status in versioning."""
     local_repo_dir, bare_remote_dir = git_repo_with_remote
     repo = git.Repo(local_repo_dir)
 
@@ -152,9 +158,10 @@ def test_versioning_ahead_and_diverged(git_repo_with_remote, temp_dir):
     assert rb_res.version_status in (VersionStatus.DIVERGED, VersionStatus.AHEAD)
 
 
+@pytest.mark.r1
 @respx.mock
 def test_cli_search_and_track_coverage(git_repo_with_remote):
-    """Cover CLI search in table format and CLI track commands."""
+    """T-R1-AC-02-01 / T-R1-AC-04-01 (Source: AC-02-01, AC-04-01): Cover CLI search in table format and CLI track commands."""
     respx.get("https://api.github.com/search/repositories").respond(
         status_code=200,
         json={"items": [{"full_name": "owner/repo", "html_url": "url", "stargazers_count": 5, "description": "desc"}]},
@@ -173,8 +180,9 @@ def test_cli_search_and_track_coverage(git_repo_with_remote):
     assert "UP_TO_DATE" in res_track.stdout
 
 
+@pytest.mark.r1
 def test_scanner_all_platform_inference(temp_dir):
-    """Cover platform inference for gemini, codex, cursor, and universal."""
+    """T-R1-AC-01-02 (Source: AC-01-02): Cover platform inference for gemini, codex, cursor, and universal."""
     gemini_dir = temp_dir / ".gemini" / "antigravity" / "skills" / "g-skill"
     codex_dir = temp_dir / "codex" / "skills" / "cx-skill"
     cursor_dir = temp_dir / "cursor" / "skills" / "cr-skill"
@@ -200,23 +208,25 @@ def test_scanner_all_platform_inference(temp_dir):
     assert PlatformType.UNIVERSAL in platforms_found
 
 
+@pytest.mark.r2
 def test_versioning_more_branches(git_repo_with_remote, temp_dir):
-    """Cover rollback without backup tags, and fetch failures."""
+    """T-R2-EC-04-04 / T-R2-EC-04-07 (Source: EC-04-04, EC-04-07): Cover rollback without backup tags, and fetch failures."""
     local_repo_dir, _ = git_repo_with_remote
 
     # Rollback without tags should raise GitVersionError
-    with pytest.raises(git.exc.GitError) if False else pytest.raises(Exception):
+    with pytest.raises(Exception):
         rollback_skill(local_repo_dir)
 
-    # Corrupt remote URL to force fetch failure -> CHECK_FAILED
+    # Corrupt remote URL to force fetch failure -> NETWORK_TIMEOUT
     repo = git.Repo(local_repo_dir)
     repo.remotes.origin.set_url("http://127.0.0.1:9999/nonexistent.git")
     st = check_version_status(local_repo_dir, fetch_remote=True)
-    assert st.version_status == VersionStatus.CHECK_FAILED
+    assert st.version_status == VersionStatus.NETWORK_TIMEOUT
 
 
+@pytest.mark.r1
 def test_scanner_platform_inference_direct(temp_dir):
-    """Directly test platform inference loop on existing paths."""
+    """T-R1-AC-01-03 (Source: AC-01-03): Directly test platform inference loop on existing paths."""
     c_dir = temp_dir / ".claude" / "skills"
     g_dir = temp_dir / ".gemini" / "antigravity" / "skills"
     cx_dir = temp_dir / "codex" / "skills"
@@ -235,8 +245,9 @@ def test_scanner_platform_inference_direct(temp_dir):
     assert len(res.skills) >= 5
 
 
+@pytest.mark.r2
 def test_versioning_no_remote_refs(git_repo_with_remote):
-    """Cover versioning when remote has no matching refs."""
+    """T-R2-EC-04-06 (Source: EC-04-06): Cover versioning when remote has no matching refs."""
     local_repo_dir, _ = git_repo_with_remote
     repo = git.Repo(local_repo_dir)
 
@@ -248,4 +259,122 @@ def test_versioning_no_remote_refs(git_repo_with_remote):
 
     status = check_version_status(local_repo_dir, fetch_remote=False)
     assert status.version_status == VersionStatus.UP_TO_DATE
+
+
+@pytest.mark.r1
+def test_cli_scan_table_format(temp_dir):
+    """T-R1-AC-05-01: CLI scan in table format renders successfully."""
+    s_dir = temp_dir / "table_skill"
+    s_dir.mkdir()
+    (s_dir / "SKILL.md").write_text("---\nname: table-skill\n---\n# Table\n", encoding="utf-8")
+    res = runner.invoke(app, ["scan", "--path", str(temp_dir), "--format", "table"])
+    assert res.exit_code == 0
+    assert "table-skill" in res.stdout
+
+
+@pytest.mark.r1
+def test_workflow_auditor_complete_incomplete_normal(temp_dir):
+    """T-R1-AC-06-02: Normal completion of an incomplete skill in workflow auditor."""
+    from skill_manager.core.workflow_auditor import audit_workflow_skills, complete_workflow_skills
+    incomp = temp_dir / "my-incomp"
+    incomp.mkdir()
+    (incomp / "SKILL.md").write_text("---\nname: my-incomp\n---\n# My Incomp\n", encoding="utf-8")
+    wf = temp_dir / "wf.md"
+    wf.write_text("- skills/my-incomp/SKILL.md\n", encoding="utf-8")
+
+    audit_res = audit_workflow_skills(workflow_path=wf, custom_paths=[str(temp_dir)])
+    comp_res = complete_workflow_skills(audit_res, target_dir=temp_dir, dry_run=False)
+    assert comp_res.success is True
+    assert "my-incomp" in comp_res.completed_skills
+
+
+@pytest.mark.r1
+def test_scanner_no_frontmatter_and_single_skill_direct(temp_dir):
+    """T-R1-AC-01-01: Scanner handles markdown without frontmatter and root-level skill."""
+    f = temp_dir / "plain.md"
+    f.write_text("# Plain Markdown\nNo frontmatter\n", encoding="utf-8")
+    meta, body = parse_yaml_frontmatter(f)
+    assert meta == {}
+    assert "Plain Markdown" in body
+
+    # Root-level skill inspection directly
+    root_skill = temp_dir / "root_skill"
+    root_skill.mkdir()
+    (root_skill / "SKILL.md").write_text("---\nname: root\n---\n# Root\n", encoding="utf-8")
+    res = scan_skills(platform=PlatformType.UNIVERSAL, custom_paths=[str(root_skill)])
+    assert res.summary.valid_skills == 1
+
+
+@pytest.mark.r1
+@respx.mock
+def test_remote_search_hf_and_github_pagination():
+    """T-R1-AC-02-01 / T-R1-AC-02-02: Remote search handles pagination and HuggingFace items."""
+    respx.get("https://api.github.com/search/repositories").respond(
+        status_code=200,
+        json={"items": [{"full_name": "owner/page2", "html_url": "url", "stargazers_count": 20}]},
+    )
+    respx.get("https://huggingface.co/api/spaces").respond(
+        status_code=200,
+        json=[{"id": "hf-user/tool", "likes": 30, "tags": ["skill"]}],
+    )
+    with httpx.Client() as client:
+        res_all = search_remote_skills(query="agent", source="all", page=2, limit=10, client=client)
+        assert len(res_all.items) >= 2
+
+
+@pytest.mark.r1
+def test_versioning_dirty_force_upgrade(git_repo_with_remote):
+    """T-R1-AC-04-02: Force upgrade succeeds even when local has dirty changes if force=True."""
+    local_repo_dir, _ = git_repo_with_remote
+    (local_repo_dir / "temp_dirty.txt").write_text("dirty", encoding="utf-8")
+    res = upgrade_skill(local_repo_dir, force=True)
+    assert res.version_status == VersionStatus.UP_TO_DATE
+
+
+@pytest.mark.r1
+def test_scanner_edge_and_branch_coverage(temp_dir):
+    """T-R1-AC-01-01: Cover scanner visited_realpaths, max_depth, non-dict yaml, and git/permission errors."""
+    from unittest.mock import patch
+    from skill_manager.core.scanner import scan_directory_tree
+
+    # 1. Non-dict YAML (parsed not dict)
+    non_dict_file = temp_dir / "non_dict.md"
+    non_dict_file.write_text("---\njust a string not a dict\n---\n# Body\n", encoding="utf-8")
+    meta, body = parse_yaml_frontmatter(non_dict_file)
+    assert meta == {}
+    assert "Body" in body
+
+    # 2. Circular symlink at root_dir level
+    visited = {str(temp_dir.resolve())}
+    list(scan_directory_tree(temp_dir, platform=PlatformType.UNIVERSAL, visited_realpaths=visited))
+
+    # 3. max_depth truncation
+    d1 = temp_dir / "lvl1"
+    d2 = d1 / "lvl2"
+    d3 = d2 / "lvl3"
+    d3.mkdir(parents=True)
+    (d3 / "SKILL.md").write_text("---\nname: deep\n---\n", encoding="utf-8")
+    found_depth = list(scan_directory_tree(temp_dir, platform=PlatformType.UNIVERSAL, max_depth=1))
+    assert not any(s.name == "deep" for s in found_depth)
+
+    # 4. inspect_single_skill with PermissionError
+    perm_dir = temp_dir / "perm_skill"
+    perm_dir.mkdir()
+    (perm_dir / "SKILL.md").write_text("---\nname: p\n---\n", encoding="utf-8")
+    with patch("pathlib.Path.is_file", side_effect=PermissionError("denied")):
+        assert inspect_single_skill(perm_dir, PlatformType.UNIVERSAL) is None
+
+    # 5. inspect_single_skill with Exception in git repo
+    with patch("git.Repo", side_effect=Exception("corrupt git")):
+        with patch.object(Path, "exists", side_effect=lambda: True):
+            # should pass safely without crash
+            inspect_single_skill(perm_dir, PlatformType.UNIVERSAL)
+
+    # 6. scan_directory_tree root permission error
+    with patch("pathlib.Path.resolve", side_effect=PermissionError("access denied")):
+        list(scan_directory_tree(temp_dir, platform=PlatformType.UNIVERSAL))
+
+    # 7. scan_directory_tree root other exception
+    with patch("pathlib.Path.resolve", side_effect=RuntimeError("unexpected")):
+        list(scan_directory_tree(temp_dir, platform=PlatformType.UNIVERSAL))
 

@@ -14,8 +14,9 @@ from skill_manager.core.versioning import (
 from skill_manager.models import VersionStatus
 
 
+@pytest.mark.r1
 def test_t_r1_ac_04_01_behind_status(git_repo_with_remote, temp_dir):
-    """T-R1-AC-04-01: Detect BEHIND status when remote has new commits."""
+    """T-R1-AC-04-01 (Source: AC-04-01): Detect BEHIND status when remote has new commits."""
     local_repo_dir, bare_remote_dir = git_repo_with_remote
 
     # Clone another repo to simulate remote updates
@@ -32,8 +33,9 @@ def test_t_r1_ac_04_01_behind_status(git_repo_with_remote, temp_dir):
     assert status.behind_count == 1
 
 
+@pytest.mark.r1
 def test_t_r1_ac_04_02_and_03_upgrade_and_rollback(git_repo_with_remote, temp_dir):
-    """T-R1-AC-04-02/03: Upgrade creates backup tag, rollback restores commit."""
+    """T-R1-AC-04-02 / T-R1-AC-04-03 (Source: AC-04-02, AC-04-03): Upgrade creates backup tag, rollback restores commit."""
     local_repo_dir, bare_remote_dir = git_repo_with_remote
 
     local_repo = git.Repo(local_repo_dir)
@@ -62,8 +64,9 @@ def test_t_r1_ac_04_02_and_03_upgrade_and_rollback(git_repo_with_remote, temp_di
     assert res_down.local_commit == initial_sha
 
 
+@pytest.mark.r2
 def test_t_r2_ac_04_04_dirty_worktree_guard(git_repo_with_remote):
-    """T-R2-AC-04-04: Upgrade fails when uncommitted changes exist."""
+    """T-R2-AC-04-04 (Source: AC-04-04): Upgrade fails when uncommitted changes exist."""
     local_repo_dir, _ = git_repo_with_remote
 
     # Create uncommitted dirty file
@@ -73,8 +76,9 @@ def test_t_r2_ac_04_04_dirty_worktree_guard(git_repo_with_remote):
         upgrade_skill(local_repo_dir, force=False)
 
 
+@pytest.mark.r2
 def test_t_r2_ec_04_01_untracked_directory(temp_dir):
-    """T-R2-EC-04-01: Non-git directory raises GitVersionError."""
+    """T-R2-EC-04-01 (Source: EC-04-01): Non-git directory raises GitVersionError."""
     plain_dir = temp_dir / "plain_dir"
     plain_dir.mkdir()
 

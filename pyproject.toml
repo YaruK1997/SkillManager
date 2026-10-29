@@ -39,4 +39,9 @@ where = ["src"]
 testpaths = ["tests"]
 pythonpath = ["src"]
 addopts = "-v"
+markers = [
+    "r1: Round 1 functional correctness and normal AC tests (T-R1-*)",
+    "r2: Round 2 boundary, abnormal AC, edge case, and fault injection tests (T-R2-*)",
+    "r3: Round 3 regression and end-to-end acceptance workflow tests (T-R3-*)",
+]
 

@@ -252,10 +252,17 @@ def complete_skill(
                 completed_text += f"## {sec}\n\nAdd details here.\n\n"
 
         tmp_file = skill_dir / f"SKILL.md.tmp.{os.getpid()}"
-        tmp_file.write_text(completed_text, encoding="utf-8")
-        # Atomic replacement
-        tmp_file.replace(skill_md)
-        modified_files.append(str(skill_md))
+        try:
+            tmp_file.write_text(completed_text, encoding="utf-8")
+            # Atomic replacement
+            tmp_file.replace(skill_md)
+            modified_files.append(str(skill_md))
+        finally:
+            if tmp_file.exists():
+                try:
+                    tmp_file.unlink()
+                except OSError:
+                    pass
 
         return True, diff_text, modified_files
     except PermissionError as pe:

@@ -10,8 +10,9 @@ from skill_manager.core.indexer import (
 )
 
 
+@pytest.mark.r1
 def test_t_r1_ac_03_01_audit_incomplete_skill(sample_incomplete_skill, sample_index_file):
-    """T-R1-AC-03-01: Incomplete skill fails audit and identifies missing sections & dirs."""
+    """T-R1-AC-03-01 (Source: AC-03-01): Incomplete skill fails audit and identifies missing sections & dirs."""
     res = audit_skill(sample_incomplete_skill, index_path=sample_index_file)
     assert res.is_compliant is False
     assert "When to Use" in res.missing_sections
@@ -22,8 +23,9 @@ def test_t_r1_ac_03_01_audit_incomplete_skill(sample_incomplete_skill, sample_in
     assert "## When to Use" in res.diff_content
 
 
+@pytest.mark.r1
 def test_t_r1_ac_03_02_complete_skill_applied(sample_incomplete_skill, sample_index_file):
-    """T-R1-AC-03-02: Auto-completion fixes missing sections and creates directories."""
+    """T-R1-AC-03-02 (Source: AC-03-02): Auto-completion fixes missing sections and creates directories."""
     # Run completion with dry_run=False
     success, diff, modified = complete_skill(sample_incomplete_skill, index_path=sample_index_file, dry_run=False)
     assert success is True
@@ -44,8 +46,9 @@ def test_t_r1_ac_03_02_complete_skill_applied(sample_incomplete_skill, sample_in
     assert re_audit.is_compliant is True
 
 
+@pytest.mark.r2
 def test_t_r2_ac_03_03_invalid_index_schema(temp_dir):
-    """T-R2-AC-03-03: Empty index.md raises IndexSchemaError."""
+    """T-R2-AC-03-03 (Source: AC-03-03): Empty index.md raises IndexSchemaError."""
     bad_index = temp_dir / "bad_index.md"
     bad_index.write_text("   \n\n  ", encoding="utf-8")
 
@@ -53,8 +56,9 @@ def test_t_r2_ac_03_03_invalid_index_schema(temp_dir):
         parse_index_schema(bad_index)
 
 
+@pytest.mark.r2
 def test_t_r2_ec_03_01_empty_directory_audit(temp_dir):
-    """T-R2-EC-03-01: Empty target directory raises ValueError."""
+    """T-R2-EC-03-01 (Source: EC-03-01): Empty target directory raises ValueError."""
     empty_skill = temp_dir / "empty-skill-dir"
     empty_skill.mkdir()
 
@@ -62,8 +66,9 @@ def test_t_r2_ec_03_01_empty_directory_audit(temp_dir):
         audit_skill(empty_skill)
 
 
+@pytest.mark.r1
 def test_audit_fully_compliant_skill(sample_valid_skill, sample_index_file):
-    """Audit of valid skill returns compliant."""
+    """T-R1-AC-03-01 (Source: AC-03-01): Audit of valid skill returns compliant."""
     res = audit_skill(sample_valid_skill, index_path=sample_index_file)
     assert res.is_compliant is True
     assert len(res.missing_fields) == 0

@@ -14,6 +14,7 @@ class VersionStatus(str, Enum):
     DIVERGED = "DIVERGED"
     UNTRACKED = "UNTRACKED"
     CHECK_FAILED = "CHECK_FAILED"
+    NETWORK_TIMEOUT = "NETWORK_TIMEOUT"
 
 
 class PlatformType(str, Enum):

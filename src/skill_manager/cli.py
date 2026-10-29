@@ -55,8 +55,8 @@ def _output(data: dict, format_type: str, render_table_fn):
 @app.command()
 def scan(
     platform: str = typer.Option("all", "--platform", "-p", help="Target platform (claude, antigravity, codex, cursor, universal, all)"),
-    paths: Optional[List[str]] = typer.Option(None, "--path", help="Custom paths to scan"),
-    depth: int = typer.Option(3, "--depth", "-d", help="Scan depth"),
+    paths: Optional[List[str]] = typer.Option(None, "--path", "--custom-paths", "--custom_paths", help="Custom paths to scan"),
+    depth: int = typer.Option(3, "--depth", "-d", min=1, max=5, help="Scan depth (1-5)"),
     format: str = typer.Option("table", "--format", "-f", help="Output format: table or json"),
     config: Optional[str] = typer.Option(None, "--config", "-c", help="Config file path"),
 ):
@@ -165,6 +165,9 @@ def audit(
     except IndexSchemaError as ise:
         err_console.print(f"[bold red]{ise}[/bold red]")
         raise typer.Exit(code=3)
+    except PermissionError as pe:
+        err_console.print(f"[bold red]ACCESS_DENIED:[/bold red] {pe}")
+        raise typer.Exit(code=5)
 
     def render():
         status_str = "[bold green]COMPLIANT[/bold green]" if res.is_compliant else "[bold red]NON-COMPLIANT[/bold red]"
@@ -203,6 +206,9 @@ def complete(
     except IndexSchemaError as ise:
         err_console.print(f"[bold red]{ise}[/bold red]")
         raise typer.Exit(code=3)
+    except PermissionError as pe:
+        err_console.print(f"[bold red]ACCESS_DENIED:[/bold red] {pe}")
+        raise typer.Exit(code=5)
     except PermissionError as pe:
         err_console.print(f"[bold red]{pe}[/bold red]")
         raise typer.Exit(code=5)
@@ -270,6 +276,36 @@ def track(
         console.print(table)
 
     _output(res.model_dump(), format, render)
+    if res.version_status == VersionStatus.NETWORK_TIMEOUT:
+        raise typer.Exit(code=7)
+    raise typer.Exit(code=0)
+
+
+@app.command()
+def config(
+    action: str = typer.Argument("show", help="Action: show"),
+    config_file: Optional[str] = typer.Option(None, "--config", "-c", help="Config file path"),
+    format: str = typer.Option("table", "--format", "-f", help="Output format: table or json"),
+):
+    """Manage and inspect SkillManager configuration (FR-05)."""
+    cfg = load_config(config_file)
+    data = {
+        "custom_platform_paths": {k: [str(p) for p in v] for k, v in cfg.custom_platform_paths.items()},
+        "github_token_configured": bool(cfg.github_token),
+        "hf_token_configured": bool(cfg.hf_token),
+    }
+
+    def render():
+        table = Table(title="SkillManager Configuration")
+        table.add_column("Property", style="cyan")
+        table.add_column("Value", style="bold")
+        table.add_row("GitHub Token", "Configured" if cfg.github_token else "Not Set")
+        table.add_row("HuggingFace Token", "Configured" if cfg.hf_token else "Not Set")
+        for plat, p_list in cfg.custom_platform_paths.items():
+            table.add_row(f"Custom Path ({plat})", ", ".join(str(p) for p in p_list))
+        console.print(table)
+
+    _output(data, format, render)
     raise typer.Exit(code=0)
 
 
@@ -295,11 +331,13 @@ def workflow_audit_cmd(
     wf_path = Path(workflow).resolve() if workflow else None
     t_dir = Path(target_dir).resolve() if target_dir else None
     src_dirs = [Path(s).resolve() for s in sources] if sources else None
+    c_paths = [str(t_dir)] if t_dir else None
 
     try:
         audit_res = audit_workflow_skills(
             workflow_path=wf_path,
             platform=plat_enum,
+            custom_paths=c_paths,
             config=cfg,
         )
     except FileNotFoundError as fnf:
