@@ -78,3 +78,6 @@ config.local.toml
 ehthumbs.db
 Thumbs.db
 desktop.ini
+
+# Workflow
+workflow.md
