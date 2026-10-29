@@ -3,7 +3,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    image: skill-manager:0.1.0
+    image: skill-manager:0.2.0
     container_name: skill-manager
     restart: unless-stopped
     environment:
