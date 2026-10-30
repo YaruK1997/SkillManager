@@ -3,7 +3,13 @@
 import os
 from pathlib import Path
 import pytest
-from skill_manager.config import AppConfig, get_default_platform_paths, resolve_platform_paths
+from skill_manager.config import (
+    AppConfig,
+    detect_system_os,
+    get_default_platform_paths,
+    get_host_os,
+    resolve_platform_paths,
+)
 from skill_manager.models import PlatformType
 
 
@@ -68,4 +74,37 @@ def test_load_config_from_toml_file(temp_dir):
     loaded = load_config(str(cfg_file))
     assert loaded.github_token == "gh_sample_123"
     assert loaded.hf_token == "hf_sample_456"
+
+
+@pytest.mark.r1
+def test_detect_system_os(monkeypatch):
+    """Validate system OS detection across platforms."""
+    monkeypatch.setattr("sys.platform", "win32")
+    assert detect_system_os() == "Windows"
+
+    monkeypatch.setattr("sys.platform", "darwin")
+    assert detect_system_os() == "macOS"
+
+    monkeypatch.setattr("sys.platform", "linux")
+    assert detect_system_os() == "Linux"
+
+
+@pytest.mark.r1
+def test_get_host_os_from_env(monkeypatch):
+    """Validate host OS resolution from HOST_OS environment variable with fallback."""
+    # When HOST_OS is provided
+    monkeypatch.setenv("HOST_OS", "macOS")
+    assert get_host_os() == "macOS"
+
+    monkeypatch.setenv("HOST_OS", "Windows")
+    assert get_host_os() == "Windows"
+
+    monkeypatch.setenv("HOST_OS", "Linux")
+    assert get_host_os() == "Linux"
+
+    # Fallback to system detection when HOST_OS is not set
+    monkeypatch.delenv("HOST_OS", raising=False)
+    monkeypatch.setattr("sys.platform", "darwin")
+    assert get_host_os() == "macOS"
+
 

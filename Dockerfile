@@ -32,9 +32,12 @@ RUN apt-get update && \
 COPY --from=builder /opt/python /opt/python
 COPY --from=builder /opt/venv /opt/venv
 
+ARG HOST_OS=linux
+
 ENV PATH="/opt/venv/bin:${PATH}" \
     PYTHONUNBUFFERED=1 \
-    HOME=/home/appuser
+    HOME=/home/appuser \
+    HOST_OS="${HOST_OS}"
 
 WORKDIR /app
 
