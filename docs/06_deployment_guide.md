@@ -25,9 +25,14 @@
 ### 2.2 服務編排與資源隔離 (`docker-compose.yml`)
 - **服務名稱**：`skill-manager`（映像檔標籤：`skill-manager:0.2.0`）
 - **網路隔離**：綁定專屬 Bridge 網路 `skill-net`。
-- **資料持久化**：
-  - Named Volume `skills-data` 掛載至 `/home/appuser/.gemini/antigravity/skills`，可持久化技能目錄。
-  - 亦可依需求綁定主機目錄，例如 `- ${USERPROFILE}/.claude/skills:/home/appuser/.claude/skills:ro`。
+- **跨平台本機技能掛載 (Windows / macOS / Linux)**：
+  - 於建構時自動偵測本機作業系統類型，取得各平台 Host Home 目錄（Windows: `%USERPROFILE%`，macOS / Linux: `$HOME`）。
+  - 自動映射本機全域技能目錄至容器非 root 使用者環境：
+    - `${HOST_GEMINI_SKILLS_DIR}:/home/appuser/.gemini/antigravity/skills`
+    - `${HOST_CLAUDE_SKILLS_DIR}:/home/appuser/.claude/skills`
+    - `${HOST_CODEX_SKILLS_DIR}:/home/appuser/.codex/skills`
+    - `${HOST_CURSOR_SKILLS_DIR}:/home/appuser/.cursor/skills`
+  - `docker-compose.yml` 支援 `${HOST_GEMINI_SKILLS_DIR:-${HOST_HOME:-${USERPROFILE:-$HOME}}/...}` 三層容錯回退機制。
 - **資源限制 (NFR-05 合規)**：
   - CPU 限制：上限 `0.50 Core`（保留 `0.10 Core`）。
   - 記憶體限制：上限 `128 MB`（保留 `32 MB`）。
@@ -53,21 +58,30 @@ chmod +x ./deploy.sh
 ### 3.3 實測部署驗證日誌 (Live Verification Evidence)
 
 ```text
-=== [1/4] Building SkillManager Docker Image ===
- Image skill-manager:0.2.0 Built in 270.4s
+=== [1/4] Detecting Host Operating System & Preparing Environment ===
+[INFO] Host Operating System : macOS
+[INFO] Host Home Directory   : /Users/yaru
+[INFO] Host Gemini Skills    : /Users/yaru/.gemini/antigravity/skills
+[INFO] Host Claude Skills    : /Users/yaru/.claude/skills
 
-=== [2/4] Starting SkillManager Container ===
- Container skill-manager Recreated
- Container skill-manager Starting
+=== [2/4] Building SkillManager Docker Image (macOS) ===
+ Image skill-manager:0.2.0 Built
+
+=== [3/4] Starting SkillManager Container & Mounting Host Skills ===
  Container skill-manager Started
 
-=== [3/4] Waiting for Container Healthcheck Probe ===
+=== [4/4] Waiting for Container Healthcheck Probe ===
 Attempt 1/10 : Container status = starting
 Attempt 2/10 : Container status = healthy
 
-=== [4/4] Verifying CLI Healthcheck Endpoint Inside Container ===
+=== Verifying CLI Healthcheck Endpoint Inside Container ===
 {
   "status": "healthy",
+  "code": 200,
+  "version": "0.2.0",
+  "python": "3.15.2"
+}
+[SUCCESS] SkillManager deployed and verified HEALTHY (200) on macOS!
   "code": 200,
   "version": "0.2.0",
   "python": "3.15.2"

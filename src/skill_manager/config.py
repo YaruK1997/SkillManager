@@ -18,6 +18,34 @@ class AppConfig(BaseModel):
     max_scan_depth: int = Field(default=3)
 
 
+def detect_system_os() -> str:
+    """Detect operating system type: 'Windows', 'macOS', or 'Linux'."""
+    if sys.platform.startswith("win"):
+        return "Windows"
+    elif sys.platform == "darwin":
+        return "macOS"
+    elif sys.platform.startswith("linux"):
+        return "Linux"
+    return sys.platform
+
+
+def get_host_os() -> str:
+    """Get the host OS type, checking HOST_OS environment variable first (e.g. inside Docker),
+    falling back to detect_system_os().
+    """
+    env_os = os.environ.get("HOST_OS")
+    if env_os:
+        low = env_os.lower()
+        if "win" in low:
+            return "Windows"
+        elif "darwin" in low or "mac" in low:
+            return "macOS"
+        elif "linux" in low:
+            return "Linux"
+        return env_os
+    return detect_system_os()
+
+
 def get_default_platform_paths() -> Dict[PlatformType, List[Path]]:
     """Determine standard global skill directories per platform across Windows, macOS, and Linux."""
     home = Path.home()

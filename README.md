@@ -167,17 +167,21 @@ docker compose down -v
 | **執行身分** | 非 Root 使用者 `appuser (UID 1000 / GID 1000)`，落實最小權限原則 |
 | **網路隔離** | 專屬 Bridge 網路 `skill-net` |
 | **資源限制** | CPU 限制 `0.50 Core`；記憶體限制 `128 MB`（保留 `32 MB`） |
-| **資料持久化** | Named Volume `skills-data` 掛載至 `/home/appuser/.gemini/antigravity/skills` |
+| **資料持久化與掛載** | 自動跨平台判斷本機 OS (Windows `%USERPROFILE%` / macOS `$HOME` / Linux `$HOME`)，自動映射本機全域技能目錄至容器中 |
 | **健康檢查探針** | 每 15 秒執行 `CMD skill-manager healthcheck --format json`，回傳 200/Healthy |
 
-#### 掛載本機技能目錄 (選用)
-如需讓容器直接管理主機既有的全域技能目錄，可於 `docker-compose.yml` 的 `volumes` 區段增加主機映射：
+#### 本機技能目錄掛載 (自動跨平台支援)
+SkillManager 於 Docker 建構與啟動時，會自動判斷本機作業系統類型（Windows / macOS / Linux），並透過 `docker-compose.yml` 將主機上的各 AI 技能目錄掛載至容器內：
 
 ```yaml
 volumes:
-  - ${USERPROFILE}/.claude/skills:/home/appuser/.claude/skills
-  - ${USERPROFILE}/.gemini/antigravity/skills:/home/appuser/.gemini/antigravity/skills
+  - ${HOST_GEMINI_SKILLS_DIR:-${HOST_HOME:-${USERPROFILE:-$HOME}}/.gemini/antigravity/skills}:/home/appuser/.gemini/antigravity/skills
+  - ${HOST_CLAUDE_SKILLS_DIR:-${HOST_HOME:-${USERPROFILE:-$HOME}}/.claude/skills}:/home/appuser/.claude/skills
+  - ${HOST_CODEX_SKILLS_DIR:-${HOST_HOME:-${USERPROFILE:-$HOME}}/.codex/skills}:/home/appuser/.codex/skills
+  - ${HOST_CURSOR_SKILLS_DIR:-${HOST_HOME:-${USERPROFILE:-$HOME}}/.cursor/skills}:/home/appuser/.cursor/skills
 ```
+
+透過一鍵部署腳本（`deploy.sh` 或 `deploy.ps1`）執行時，系統會自動探測 OS、預先確認目錄存在並將環境變數寫入 `.env`，確保本機技能得以無縫被容器內程式掃描與審計。
 
 #### 設定遠端 API 憑證 (選用)
 如需提高 GitHub 或 HuggingFace API 查詢上限，可於啟動前設定環境變數或建立 `.env` 檔案：

@@ -25,6 +25,7 @@
 - **容器化與維運套件升級 (Phase 5)**：
   - 升級映像檔標籤至 `skill-manager:0.2.0`。
   - 整合多階段 `Dockerfile`（CPython 3.15 + uv 高速建構 + Debian Bookworm 輕量執行期）。
+  - **跨平台 Host OS 偵測與本機技能掛載**：新增建構與啟動時自動判斷本機作業系統（Windows / macOS / Linux），自動預建立技能目錄並將 Host 端之 Gemini/Antigravity、Claude、Codex、Cursor 技能目錄透過 `docker-compose.yml` 綁定掛載至容器環境中。
   - 非特權使用者 `appuser (1000:1000)` 運行，配置 128 MB 記憶體上限與 Bridge 網路隔離。
   - 內建 Healthcheck 探針自動驗證回傳 `200/Healthy`。
 

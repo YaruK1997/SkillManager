@@ -3,6 +3,8 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      args:
+        - HOST_OS=${HOST_OS:-linux}
     image: skill-manager:0.2.0
     container_name: skill-manager
     restart: unless-stopped
@@ -10,8 +12,13 @@ services:
       - GITHUB_TOKEN=${GITHUB_TOKEN:-}
       - HF_TOKEN=${HF_TOKEN:-}
       - PYTHONUNBUFFERED=1
+      - HOST_OS=${HOST_OS:-}
     volumes:
-      - skills-data:/home/appuser/.gemini/antigravity/skills
+      # Cross-platform host skills mount (Windows: %USERPROFILE%, macOS/Linux: $HOME)
+      - ${HOST_GEMINI_SKILLS_DIR:-${HOST_HOME:-${USERPROFILE:-$HOME}}/.gemini/antigravity/skills}:/home/appuser/.gemini/antigravity/skills
+      - ${HOST_CLAUDE_SKILLS_DIR:-${HOST_HOME:-${USERPROFILE:-$HOME}}/.claude/skills}:/home/appuser/.claude/skills
+      - ${HOST_CODEX_SKILLS_DIR:-${HOST_HOME:-${USERPROFILE:-$HOME}}/.codex/skills}:/home/appuser/.codex/skills
+      - ${HOST_CURSOR_SKILLS_DIR:-${HOST_HOME:-${USERPROFILE:-$HOME}}/.cursor/skills}:/home/appuser/.cursor/skills
     networks:
       - skill-net
     deploy:
@@ -35,10 +42,6 @@ services:
       timeout: 5s
       retries: 3
       start_period: 5s
-
-volumes:
-  skills-data:
-    driver: local
 
 networks:
   skill-net:
