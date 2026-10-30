@@ -175,6 +175,7 @@ SkillManager 於 Docker 建構與啟動時，會自動判斷本機作業系統�
 
 ```yaml
 volumes:
+  - .:/app
   - ${HOST_GEMINI_SKILLS_DIR:-${HOST_HOME:-${USERPROFILE:-$HOME}}/.gemini/antigravity/skills}:/home/appuser/.gemini/antigravity/skills
   - ${HOST_CLAUDE_SKILLS_DIR:-${HOST_HOME:-${USERPROFILE:-$HOME}}/.claude/skills}:/home/appuser/.claude/skills
   - ${HOST_CODEX_SKILLS_DIR:-${HOST_HOME:-${USERPROFILE:-$HOME}}/.codex/skills}:/home/appuser/.codex/skills
