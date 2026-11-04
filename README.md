@@ -35,6 +35,69 @@
 
 ---
 
+## 📁 專案資料夾結構 (Project Structure)
+
+```text
+Skill-manager/
+├── .dockerignore                  # Docker 構建忽略清單
+├── .env.example                   # 環境變數設定範本 (支援跨平台路徑定義)
+├── .gitignore                     # Git 版本控制忽略清單
+├── deploy.ps1                     # Windows PowerShell 一鍵容器建置、啟動與健康檢查腳本
+├── deploy.sh                      # Linux / macOS Bash 一鍵容器建置與部署腳本
+├── docker-compose.yml             # Docker Compose 服務編排、網路隔離與資源限制定義
+├── Dockerfile                     # 多階段輕量化 Docker 構建檔 (CPython 3.15 + uv + Debian)
+├── pyproject.toml                 # 專案套件配置、相依函式庫與 CLI 進入點定義
+├── uv.lock                        # uv 套件依賴版本鎖定檔
+├── README.md                      # 專案主說明文件
+│
+├── docs/                          # 專案工程文件與各階段審查交付物
+│   ├── 01_plan.md                 # 階段 1：實作計畫與模組化任務清單
+│   ├── 01_spec.md                 # 階段 1：系統需求規格說明書 (FR-01 ~ FR-06, 27 AC, 7 EC)
+│   ├── 01_spec_review.md          # 階段 1：三輪規格自測與審查紀錄表
+│   ├── 02_architecture.md         # 階段 2：系統架構設計、資料流與元件交互圖
+│   ├── 03_test_plan.md            # 階段 3A：多輪極限測試計畫與追溯矩陣 (R1–R3)
+│   ├── 04_test_report.md          # 階段 3B：測試執行日誌、覆蓋率核算與 Reviewer 報告
+│   ├── 05_security_audit.md       # 階段 4：CWE 漏洞靜態分析與 SCA 相依套件審查報告
+│   ├── 06_deployment_guide.md     # 階段 5：容器化部署架構、探針配置與維運指南
+│   ├── 07_changelog.md            # 版本演進日誌 (Keep a Changelog 格式)
+│   └── 08_update_plan.md          # TUI 現代化更新計畫 (v0.3.0 架構與互動設計)
+│
+├── scripts/                       # 跨平台輔助與自動化腳本
+│   └── detect_os.sh               # 跨平台作業系統檢測腳本 (Windows / macOS / Linux)
+│
+├── src/
+│   └── skill_manager/             # SkillManager 核心原始碼套件
+│       ├── __init__.py            # 套件初始化與版本號定義 (v0.2.0)
+│       ├── cli.py                 # Typer 命令列介面 (scan, search, audit, track, workflow-audit, config, healthcheck)
+│       ├── config.py              # 跨平台預設目錄探測與 config.toml 配置解析
+│       ├── models.py              # Pydantic 資料實體模型與狀態列舉定義
+│       └── core/                  # 核心業務邏輯模組
+│           ├── __init__.py
+│           ├── indexer.py         # index.md 規範解析、結構審計與原子補全引擎
+│           ├── remote_search.py   # GitHub REST API 與 HuggingFace Hub 遠端檢索引擎
+│           ├── scanner.py         # 本機全域目錄掃描與 YAML Frontmatter 解析
+│           ├── versioning.py      # Git 版本狀態追蹤、快照備份標籤與安全回滾引擎
+│           └── workflow_auditor.py# 工作流程依賴解析、技能狀態審查與啟動自動補全引擎
+│
+└── tests/                         # 自動化測試套件 (93 項測試案例，通過率 100%)
+    ├── conftest.py                # 全域 Fixture 與跨平台安全暫存環境
+    ├── integration/
+    │   └── test_e2e_workflow.py   # R3 階段：端到端整合生命週期與工作流補全測試
+    └── unit/
+        ├── test_cli.py            # CLI 基礎子指令與參數別名單元測試
+        ├── test_cli_workflow.py   # CLI 工作流審計與自動補全單元測試
+        ├── test_config.py         # 跨平台目錄推論與設定檔覆寫測試
+        ├── test_indexer.py        # index.md 規則解析與目錄補全單元測試
+        ├── test_more_coverage.py  # 核心模組高分支覆蓋率補充測試
+        ├── test_r2_boundaries.py  # R2 階段：極限邊界、異常注入與安全防禦測試 (CWE-88/CWE-22)
+        ├── test_remote_search.py  # 遠端 API 搜尋、Rate Limit 與指數退避重試測試
+        ├── test_scanner.py        # 本機全域技能探測與循環連結防護測試
+        ├── test_versioning.py     # Git 版本比對、安全標籤快照與回滾測試
+        └── test_workflow_auditor.py# 工作流程規格解析與來源複製補全測試
+```
+
+---
+
 ## 🚀 快速開始 (本機模式)
 
 ### 1. 環境安裝 (使用 `uv`)
@@ -216,3 +279,4 @@ SkillManager 遵循安全編碼規範，並將安全性檢驗納入自動化測�
 - 🛡️ [資訊安全審計報告 (docs/05_security_audit.md)](docs/05_security_audit.md)：CWE 靜態分析、機敏掃描與 SCA 清查。
 - 🚢 [部署與維運指南 (docs/06_deployment_guide.md)](docs/06_deployment_guide.md)：詳細容器化編排、探針指標與維運手冊。
 - 📝 [版本變更日誌 (docs/07_changelog.md)](docs/07_changelog.md)：v0.1.0 與 v0.2.0 詳細版本演進紀錄。
+- 💡 [TUI 更新計畫 (docs/08_update_plan.md)](docs/08_update_plan.md)：v0.3.0 現代終端互動式介面 (TUI) 之演進架構、事件驅動解耦與實施規劃。
