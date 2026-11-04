@@ -25,7 +25,8 @@
 ### 2.2 服務編排與資源隔離 (`docker-compose.yml`)
 - **服務名稱**：`skill-manager`（映像檔標籤：`skill-manager:0.2.0`）
 - **網路隔離**：綁定專屬 Bridge 網路 `skill-net`。
-- **跨平台本機技能掛載 (Windows / macOS / Linux)**：
+- **跨平台本機專案與技能目錄掛載 (Windows / macOS / Linux)**：
+  - 掛載本機專案目錄至容器工作目錄：`.:/app`，使容器內得以直接讀取主機專案之工作流定義檔與設定。
   - 於建構時自動偵測本機作業系統類型，取得各平台 Host Home 目錄（Windows: `%USERPROFILE%`，macOS / Linux: `$HOME`）。
   - 自動映射本機全域技能目錄至容器非 root 使用者環境：
     - `${HOST_GEMINI_SKILLS_DIR}:/home/appuser/.gemini/antigravity/skills`

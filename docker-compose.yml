@@ -14,6 +14,8 @@ services:
       - PYTHONUNBUFFERED=1
       - HOST_OS=${HOST_OS:-}
     volumes:
+      # Mount current host workspace directory to /app
+      - .:/app
       # Cross-platform host skills mount (Windows: %USERPROFILE%, macOS/Linux: $HOME)
       - ${HOST_GEMINI_SKILLS_DIR:-${HOST_HOME:-${USERPROFILE:-$HOME}}/.gemini/antigravity/skills}:/home/appuser/.gemini/antigravity/skills
       - ${HOST_CLAUDE_SKILLS_DIR:-${HOST_HOME:-${USERPROFILE:-$HOME}}/.claude/skills}:/home/appuser/.claude/skills
