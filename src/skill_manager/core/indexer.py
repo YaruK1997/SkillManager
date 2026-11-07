@@ -22,6 +22,50 @@ class IndexSchemaError(Exception):
     pass
 
 
+def strip_markdown_code_blocks(text: str) -> str:
+    """Remove fenced code blocks and HTML comments from markdown text."""
+    # Remove fenced code blocks (``` or ~~~) even if unclosed at EOF
+    cleaned = re.sub(r"(?ms)^[ \t]*(```|~~~).*?(?:^\1[ \t]*$|\Z)", "", text)
+    # Remove HTML comments
+    cleaned = re.sub(r"<!--.*?-->", "", cleaned, flags=re.DOTALL)
+    return cleaned
+
+
+def extract_markdown_headings(text: str) -> List[str]:
+    """Extract clean markdown heading titles (ATX headings # to ###), stripping code blocks."""
+    clean_text = strip_markdown_code_blocks(text)
+    raw_headings = re.findall(r"^[ \t]*#{1,3}[ \t]+(.+?)[ \t]*#*[ \t]*$", clean_text, flags=re.MULTILINE)
+    cleaned = []
+    for h in raw_headings:
+        # Strip markdown formatting like **bold**, *italic*, `code`, [links](...)
+        t = re.sub(r"\*\*([^*]+)\*\*", r"\1", h)
+        t = re.sub(r"\*([^*]+)\*", r"\1", t)
+        t = re.sub(r"`([^`]+)`", r"\1", t)
+        t = re.sub(r"\[([^\]]+)\]\([^)]+\)", r"\1", t)
+        t = t.strip()
+        if t:
+            cleaned.append(t)
+    return cleaned
+
+
+def is_section_matching(target_sec: str, existing_heading: str) -> bool:
+    """Check if an existing heading matches target_sec with high precision."""
+    sec_norm = target_sec.strip().lower()
+    head_norm = existing_heading.strip().lower()
+
+    # Exact match after normalization
+    if head_norm == sec_norm:
+        return True
+
+    # Reject headings starting with negative qualifiers (e.g. "not instructions", "no instructions")
+    if re.search(r"\b(not|no|without|unrelated|anti)\b", head_norm):
+        return False
+
+    # Check for word boundary matching, e.g. "Detailed Instructions" or "Instructions (Usage)"
+    pattern = rf"\b{re.escape(sec_norm)}\b"
+    return bool(re.search(pattern, head_norm))
+
+
 def parse_index_schema(index_path: Path) -> Dict[str, Any]:
     """Parse index.md or specification guide to extract required sections and structure."""
     if not index_path.exists() or not index_path.is_file():
@@ -35,8 +79,8 @@ def parse_index_schema(index_path: Path) -> Dict[str, Any]:
     if not content.strip():
         raise IndexSchemaError("INVALID_INDEX_SCHEMA: unable to parse section headers from index.md")
 
-    # Match markdown headings (e.g. ## Heading)
-    headers = re.findall(r"^#{1,3}\s+(.+)$", content, flags=re.MULTILINE)
+    # Match markdown headings (excluding code blocks)
+    headers = extract_markdown_headings(content)
     if not headers:
         raise IndexSchemaError("INVALID_INDEX_SCHEMA: unable to parse section headers from index.md")
 
@@ -59,25 +103,47 @@ def parse_index_schema(index_path: Path) -> Dict[str, Any]:
     }
 
 
-def audit_skill(skill_dir: Path, index_path: Optional[Path] = None) -> AuditResult:
+def audit_skill(
+    skill_dir: Path,
+    index_path: Optional[Path] = None,
+    allow_empty: bool = False,
+) -> AuditResult:
     """Audit target skill directory against index.md specifications."""
     if not skill_dir.exists() or not skill_dir.is_dir():
         raise FileNotFoundError(f"Target skill directory not found: {skill_dir}")
 
-    # Check if directory has any files
-    entries = list(skill_dir.iterdir())
-    if not entries:
-        raise ValueError("TARGET_DIR_EMPTY: Directory contains no files.")
-
-    # Determine schema
+    # Determine schema first so it is available for empty dir or existing dir
     schema = {
         "required_fields": DEFAULT_REQUIRED_FIELDS,
         "required_sections": DEFAULT_REQUIRED_SECTIONS,
         "recommended_dirs": DEFAULT_RECOMMENDED_DIRS,
     }
-
     if index_path and index_path.exists():
         schema = parse_index_schema(index_path)
+
+    # Check if directory has any files
+    entries = list(skill_dir.iterdir())
+    if not entries:
+        if not allow_empty:
+            raise ValueError("TARGET_DIR_EMPTY: Directory contains no files.")
+        # When allow_empty=True, treat empty directory as fully missing for completion
+        missing_fields = list(schema["required_fields"])
+        missing_sections = list(schema["required_sections"])
+        missing_dirs = list(schema.get("recommended_dirs", DEFAULT_RECOMMENDED_DIRS))
+        diff = generate_skeleton_skill_md(
+            skill_name=skill_dir.name,
+            missing_fields=missing_fields,
+            missing_sections=missing_sections,
+            original_content="",
+        )
+        return AuditResult(
+            is_compliant=False,
+            missing_fields=missing_fields,
+            missing_sections=missing_sections,
+            missing_dirs=missing_dirs,
+            diff_content=diff,
+            details={"has_skill_md": False, "is_empty_dir": True},
+        )
 
     skill_md = skill_dir / "SKILL.md"
     missing_fields: List[str] = []
@@ -115,12 +181,11 @@ def audit_skill(skill_dir: Path, index_path: Optional[Path] = None) -> AuditResu
         if field not in meta or not str(meta[field]).strip():
             missing_fields.append(field)
 
-    # Check sections in body
-    existing_headings = re.findall(r"^#{1,3}\s+(.+)$", body, flags=re.MULTILINE)
-    existing_headings_clean = [h.strip().lower() for h in existing_headings]
+    # Check sections in body using code-block stripped headings and precise matching
+    existing_headings = extract_markdown_headings(body)
 
     for sec in schema.get("required_sections", DEFAULT_REQUIRED_SECTIONS):
-        if not any(sec.lower() in eh for eh in existing_headings_clean):
+        if not any(is_section_matching(sec, eh) for eh in existing_headings):
             missing_sections.append(sec)
 
     is_compliant = (len(missing_fields) == 0 and len(missing_sections) == 0 and len(missing_dirs) == 0)
@@ -145,18 +210,17 @@ def audit_skill(skill_dir: Path, index_path: Optional[Path] = None) -> AuditResu
     )
 
 
-def generate_skeleton_skill_md(
+def build_completed_skill_md(
+    original_content: str,
     skill_name: str,
     missing_fields: List[str],
     missing_sections: List[str],
-    original_content: str,
 ) -> str:
-    """Generate proposed content and compute Unified Diff."""
+    """Build completed SKILL.md content, intelligently patching frontmatter and appending missing sections."""
     lines = original_content.splitlines(keepends=True)
-
-    # If original content is empty, build from scratch
-    if not lines:
-        new_content = [
+    if not lines or not original_content.strip():
+        # Completely new file
+        res = [
             "---\n",
             f"name: {skill_name}\n",
             f"description: Skill description for {skill_name}\n",
@@ -164,18 +228,73 @@ def generate_skeleton_skill_md(
             f"# {skill_name}\n\n",
         ]
         for sec in missing_sections:
-            new_content.append(f"## {sec}\n\nAdd details here.\n\n")
-        completed_text = "".join(new_content)
+            res.append(f"## {sec}\n\nAdd details here.\n\n")
+        return "".join(res)
+
+    # Check if file starts with YAML frontmatter delimiter
+    has_frontmatter = lines[0].strip() == "---"
+    closing_idx = -1
+    if has_frontmatter:
+        for idx in range(1, len(lines)):
+            if lines[idx].strip() == "---":
+                closing_idx = idx
+                break
+
+    if not has_frontmatter or closing_idx == -1:
+        # File has NO valid frontmatter header -> Prepend frontmatter
+        fm_lines = ["---\n"]
+        name_val = skill_name
+        desc_val = f"Skill description for {skill_name}"
+        fm_lines.append(f"name: {name_val}\n")
+        fm_lines.append(f"description: {desc_val}\n")
+        for field in missing_fields:
+            if field not in ("name", "description"):
+                fm_lines.append(f"{field}: Auto-completed {field}\n")
+        fm_lines.append("---\n\n")
+
+        new_content = fm_lines + list(lines)
     else:
-        # Append missing sections to existing content
-        new_content = list(lines)
+        # File has frontmatter: lines[0] is opening '---', lines[closing_idx] is closing '---'
+        # Patch or insert missing fields inside frontmatter
+        fm_inner = list(lines[1:closing_idx])
+        for field in missing_fields:
+            val = skill_name if field == "name" else f"Skill description for {skill_name}"
+            target_line = f"{field}: {val}\n"
+            # Check if field key exists in frontmatter (e.g. empty or whitespace value)
+            for i, l in enumerate(fm_inner):
+                if re.match(rf"^\s*{re.escape(field)}\s*:", l):
+                    fm_inner[i] = target_line
+                    break
+            else:
+                # Append before closing delimiter
+                fm_inner.append(target_line)
+
+        new_content = [lines[0]] + fm_inner + list(lines[closing_idx:])
+
+    # Handle missing sections in body
+    if missing_sections:
         if not new_content[-1].endswith("\n"):
             new_content[-1] += "\n"
         new_content.append("\n")
-
         for sec in missing_sections:
             new_content.append(f"## {sec}\n\nAdd details here.\n\n")
-        completed_text = "".join(new_content)
+
+    return "".join(new_content)
+
+
+def generate_skeleton_skill_md(
+    skill_name: str,
+    missing_fields: List[str],
+    missing_sections: List[str],
+    original_content: str,
+) -> str:
+    """Generate proposed content and compute Unified Diff."""
+    completed_text = build_completed_skill_md(
+        original_content=original_content,
+        skill_name=skill_name,
+        missing_fields=missing_fields,
+        missing_sections=missing_sections,
+    )
 
     orig_lines = original_content.splitlines(keepends=True)
     comp_lines = completed_text.splitlines(keepends=True)
@@ -192,12 +311,13 @@ def complete_skill(
     skill_dir: Path,
     index_path: Optional[Path] = None,
     dry_run: bool = True,
+    allow_empty: bool = True,
 ) -> Tuple[bool, str, List[str]]:
     """Complete missing sections and directories in target skill.
     
     Returns (success, diff_string, list_of_modified_files).
     """
-    audit = audit_skill(skill_dir, index_path=index_path)
+    audit = audit_skill(skill_dir, index_path=index_path, allow_empty=allow_empty)
     if audit.is_compliant:
         return True, "", []
 
@@ -235,21 +355,12 @@ def complete_skill(
                 modified_files.append(str(keep_file))
 
         # 2. Complete SKILL.md using atomic write
-        # Generate completed text
-        if not original_text:
-            completed_text = (
-                f"---\nname: {skill_name}\ndescription: Auto-generated description for {skill_name}\n---\n\n"
-                f"# {skill_name}\n\n"
-            )
-            for sec in audit.missing_sections:
-                completed_text += f"## {sec}\n\nAdd details here.\n\n"
-        else:
-            completed_text = original_text
-            if not completed_text.endswith("\n"):
-                completed_text += "\n"
-            completed_text += "\n"
-            for sec in audit.missing_sections:
-                completed_text += f"## {sec}\n\nAdd details here.\n\n"
+        completed_text = build_completed_skill_md(
+            original_content=original_text,
+            skill_name=skill_name,
+            missing_fields=audit.missing_fields,
+            missing_sections=audit.missing_sections,
+        )
 
         tmp_file = skill_dir / f"SKILL.md.tmp.{os.getpid()}"
         try:
@@ -267,4 +378,3 @@ def complete_skill(
         return True, diff_text, modified_files
     except PermissionError as pe:
         raise PermissionError(f"WRITE_PERMISSION_DENIED: {skill_dir}") from pe
-
