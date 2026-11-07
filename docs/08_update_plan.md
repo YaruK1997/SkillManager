@@ -5,7 +5,7 @@
 - **目標版本**：`v0.3.0`
 - **架構角色**：思考 / 架構決策 (Architecture & Design)
 - **當前狀態**：草案核准 (Approved for Implementation)
-- **核心目標**：實現全生命週期常駐終端之全域 AI 技能儀表盤（Dashboard）、分區即時審計與 Unified Diff 檢視、互動式一鍵自動補全/升級/回滾，以及遠端技能檢索即時預覽與安裝。
+- **核心目標**：實現全生命週期常駐終端之全域 AI 技能儀表盤（Dashboard）、**技能全域開關（即時切換 Skill 於「全域常駐執行」或「特定時機調用」）**、分區即時審計與 Unified Diff 檢視、互動式一鍵自動補全/升級/回滾，以及遠端技能檢索即時預覽與安裝。
 
 ---
 
@@ -21,16 +21,21 @@
    - 現行 `workflow-audit` 指令以文字表格呈現 `INSTALLED`、`MISSING` 與 `INCOMPLETE`。若使用者僅想補全其中特定 1~2 項缺失技能，現行命令列僅能選擇全部補全（`--auto-complete`）或手動單項處理，缺乏核取清單（Checkbox List）式的選擇性補全體驗。
 4. **遠端搜尋與本機安裝脫節 (Decoupled Remote Search & Install)**：
    - 執行 `search` 查詢 GitHub 或 HuggingFace 遠端技能後，終端僅顯示表格清單；使用者欲安裝時，仍需自行開啟瀏覽器複製網址、手動 `git clone` 至平台目錄，無法在同一介面中按下快捷鍵直接將遠端技能套件拉取至本機。
+5. **技能常駐執行與特定時機調用缺乏即時切換開關 (Lack of Global & Per-Skill Execution Mode Switch)**：
+   - 當本機安裝數十個 AI 技能時，若全數處於「全域常駐執行（Resident / Always-On）」狀態，會導致 Agent 每次對話啟動皆載入大量 Context Token，甚至引發不同技能規範間的指令衝突與誤觸發。
+   - 過去若想將特定技能改為「特定時機調用（On-Demand / Triggered）」或進行全域策略切換，使用者必須逐一手動開啟 `SKILL.md` 修改 YAML Frontmatter（如 `alwaysApply` / `activation` 欄位）或調整目錄配置，缺乏統一的全域開關與即時切換機制。
 
 ### 1.2 預期達成效益
 - **全生命週期常駐儀表盤 (Resident TUI Workspace)**：
-  - 啟動後常駐於終端，左側即時呈現跨平台技能清單（含健康狀態圖示 🟢/🟡/🔴/⚪），右側連動呈現詳細元數據、`SKILL.md` 內文與 Audit Diff。
+  - 啟動後常駐於終端，左側即時呈現跨平台技能清單（含健康狀態圖示 🟢/🟡/🔴/⚪ 與執行模式標記 📌/⚡），右側連動呈現詳細元數據、`SKILL.md` 內文與 Audit Diff。
+- **技能全域開關與執行模式即時切換 (Global Switch & Instant Execution Mode Toggle)**：
+  - 提供「全域總開關 (`[G]`)」與「個別技能模式切換 (`[Space]` / `[M]`)」，可即時將技能於 **📌 全域常駐執行 (`RESIDENT` / Always-On)** 與 **⚡ 特定時機調用 (`ON_DEMAND` / Triggered)** 之間無縫切換，透過原子寫入自動同步 `SKILL.md` Frontmatter 與全域狀態配置，兼顧 Context Token 效率與執行靈活性。
 - **直覺流暢的鍵盤熱鍵操作**：
-  - `[A]` 立即審計、`[C]` 一鍵補全骨架、`[U]` 安全升級、`[R]` 一鍵回滾、`[O]` 原生檔案總管開啟目錄、`[/]` 即時關鍵字過濾。
+  - `[Space]/[M]` 切換常駐/按需模式、`[G]` 全域模式總開關、`[A]` 立即審計、`[C]` 一鍵補全骨架、`[U]` 安全升級、`[R]` 一鍵回滾、`[O]` 原生檔案總管開啟目錄、`[/]` 即時關鍵字過濾。
 - **異步非阻塞操作 (Non-blocking Async I/O)**：
   - 遠端 GitHub / HuggingFace 搜尋、Git fetch 網路同步均於背景工作執行緒（Worker）執行，配合旋轉進度指示器（Spinner），介面維持 60 FPS 流暢不卡頓。
 - **平滑向下相容 (Zero Breaking Changes)**：
-  - 完整保留所有現行 CLI 子命令（`scan`、`search`、`audit`、`complete`、`track`、`workflow-audit`、`config`、`healthcheck`）與 `--format json` 輸出，當偵測到無 TTY 環境（CI/CD、Pipe、背景排程）或指定子指令時自動回退為經典腳本模式。
+  - 完整保留所有現行 CLI 子命令（`scan`、`search`、`audit`、`complete`、`track`、`workflow-audit`、`config`、`healthcheck`）並新增 `mode` 子指令，支援 `--format json` 輸出；當偵測到無 TTY 環境（CI/CD、Pipe、背景排程）或指定子指令時自動回退為經典腳本模式。
 
 ---
 
@@ -46,7 +51,7 @@
                     ┌───────────────────┴───────────────────┐
                     ▼                                       ▼
         [ 輸入帶有具體子指令 ]                      [ 無子指令或明確下達 tui ]
-      (scan, search, audit, ...)                            │
+      (scan, search, audit, mode, ...)                      │
                     │                           ┌───────────┴───────────┐
                     │                           ▼                       ▼
                     │               [ 環境判斷: TTY 檢測 ]     [ 參數判定: --no-tui ]
@@ -64,6 +69,7 @@
                                    ▼
                    [ 核心非同步配接層 (Async Core Adapter) ]
                    - ScannerWorker: 背景掃描與目錄監控
+                   - ModeSwitchWorker: 全域開關與常駐/按需模式即時切換
                    - RemoteSearchWorker: 串接 GitHub / HF API
                    - VersionWorker: Git fetch / reset / tag
                    - WorkflowWorker: 工作流解析與骨架補全
@@ -71,6 +77,7 @@
                                    ▼
                      [ 核心事件匯流排 (Event Bus) ]
                      - on_skills_loaded (全域技能清單更新)
+                     - on_mode_toggled (常駐/按需執行模式狀態變更)
                      - on_audit_finished (審計結果與 Diff 產出)
                      - on_version_status (版本狀態轉移)
                      - on_log_message (分級日誌與警告事件)
@@ -79,6 +86,7 @@
          ▼                         ▼                         ▼
    [ core.scanner ]         [ core.indexer ]          [ core.versioning ]
    [ core.config ]          [ core.remote_search ]    [ core.workflow_auditor ]
+   [ core.mode_controller ]
 ```
 
 ---
@@ -89,18 +97,19 @@
 
 ```text
 +---------------------------------------------------------------------------------------------------+
-| [Header] SkillManager v0.3.0  [平台: 全部]                     [F1] 說明  [Tab] 切換視窗  [Q] 退出 |
+| [Header] SkillManager v0.3.0  [全域開關: 混合調度 (G)] [平台: 全部]    [F1] 說明 [Tab] 視窗 [Q] 退出 |
 +---------------------------------------+-----------------------------------------------------------+
 | [Tabs: [1] 本機技能庫 | [2] 工作流審計 | [3] 遠端市集 | [4] 系統設定]                              |
 +---------------------------------------+-----------------------------------------------------------+
 | [Left: Skill List / Tree View (40%)]  | [Right Top: Skill Metadata & Overview (30%)]              |
 | 快速過濾: [ agent-             ]     | 名稱: devin-code-reviewer          平台: antigravity      |
-|                                       | 路徑: D:\_side-projects\skills\devin-code-reviewer        |
-| 🟢 python-code-reviewer  (claude)     | 版本狀態: 🟡 BEHIND (落後遠端 3 個 Commit)                |
-| 🟡 devin-code-reviewer   (antigrav)   | 本地 SHA: a8f91c2   遠端: https://github.com/...          |
-| 🔴 git-workflow-helper   (cursor)     | YAML 描述: 自動化 Code Review 與安全性檢查 Agent          |
-| ⚪ scratch-script-gen    (codex)      +-----------------------------------------------------------+
-| 🟢 prompt-enhancer       (universal)  | [Right Bottom: Audit Diff & Resolution Panel (70%)]       |
+|                                       | 執行模式: 📌 全域常駐執行 (RESIDENT)  [按 Space/M 切換]    |
+| 🟢 [📌常駐] python-code-reviewer      | 路徑: D:\_side-projects\skills\devin-code-reviewer        |
+| 🟡 [📌常駐] devin-code-reviewer       | 版本狀態: 🟡 BEHIND (落後遠端 3 個 Commit)                |
+| 🔴 [⚡按需] git-workflow-helper       | 本地 SHA: a8f91c2   遠端: https://github.com/...          |
+| ⚪ [⚡按需] scratch-script-gen        | YAML 描述: 自動化 Code Review 與安全性檢查 Agent          |
+| 🟢 [📌常駐] prompt-enhancer           +-----------------------------------------------------------+
+|                                       | [Right Bottom: Audit Diff & Resolution Panel (70%)]       |
 |                                       | 規範比對: 符合度 75% | 缺失章節: 1 | 缺失目錄: 1            |
 |                                       | --- a/SKILL.md                                            |
 |                                       | +++ b/SKILL.md (補全預覽)                                 |
@@ -111,12 +120,12 @@
 |                                       | 缺失目錄結構: [!] scripts/ (待建立 .gitkeep)              |
 +---------------------------------------+-----------------------------------------------------------+
 | [Log / Status Panel - RichLog (即時通知與操作反饋)]                                               |
-| [13:00:05] [INFO] 跨平台全域掃描完成：共探測 18 項技能，15 項合規，2 項缺失，1 項需更新。           |
-| [13:00:12] [GIT]  正在檢測 devin-code-reviewer 遠端更新狀態 (fetch origin)...                   |
+| [13:00:05] [INFO] 跨平台全域掃描完成：共探測 18 項技能 (常駐: 6, 按需: 12)。                      |
+| [13:00:09] [MODE] 已將 git-workflow-helper 切換為 [⚡ 特定時機調用 (ON_DEMAND)]。                 |
 | [13:00:14] [WARN] devin-code-reviewer 發現 3 個可更新提交。                                       |
 +---------------------------------------------------------------------------------------------------+
 | [Footer - 互動快捷鍵導覽]                                                                         |
-| [A] 結構審計  [C] 補全骨架  [U] 安全升級  [R] 版本回滾  [O] 開啟目錄  [/] 搜尋  [R] 重新掃描  [Q] 退出 |
+| [Space/M] 常駐/按需切換  [G] 全域開關  [A] 審計  [C] 補全  [U] 升級  [R] 回滾  [O] 目錄  [Q] 退出  |
 +---------------------------------------------------------------------------------------------------+
 ```
 
@@ -127,6 +136,12 @@ stateDiagram-v2
     [*] --> Initializing: 啟動 TUI 介面 (載入設定)
     Initializing --> Scanning: 背景非同步掃描技能目錄
     Scanning --> Browsing: 技能載入完成，游標聚焦清單
+    
+    Browsing --> TogglingSkillMode: 按下 [Space] 或 [M] (單一技能模式切換)
+    TogglingSkillMode --> Browsing: 原子更新 SKILL.md 與設定 (📌常駐 <-> ⚡按需)
+    
+    Browsing --> SwitchingGlobalPolicy: 按下 [G] (全域總開關切換)
+    SwitchingGlobalPolicy --> Browsing: 批次套用全域策略 (全常駐 / 全按需 / 自訂配置)
     
     Browsing --> Auditing: 按下 [A] 或選擇技能 (比對 index.md)
     Auditing --> Browsing: 渲染 Diff 於右下方視窗
@@ -195,6 +210,17 @@ class UIMode(Enum):
     CLI = "cli"
     TUI = "tui"
 
+class SkillExecutionMode(Enum):
+    """技能執行與調用模式定義"""
+    RESIDENT = "resident"      # 📌 全域常駐執行 (Always-On / Global Resident)
+    ON_DEMAND = "on_demand"    # ⚡ 特定時機調用 (On-Demand / Triggered Invocation)
+
+class GlobalPolicyMode(Enum):
+    """全域開關總策略模式"""
+    ALL_RESIDENT = "all_resident"    # 強制全數技能常駐執行
+    ALL_ON_DEMAND = "all_on_demand"  # 強制全數技能轉為特定時機調用 (節省 Token 模式)
+    CUSTOM = "custom"                # 依各別技能設定獨立運行 (混合調度)
+
 @dataclass
 class ScanProgressEvent:
     current_path: str
@@ -204,6 +230,18 @@ class ScanProgressEvent:
 @dataclass
 class SkillSelectedEvent:
     skill: SkillEntity
+
+@dataclass
+class SkillModeChangedEvent:
+    skill_name: str
+    platform: str
+    old_mode: SkillExecutionMode
+    new_mode: SkillExecutionMode
+
+@dataclass
+class GlobalPolicyChangedEvent:
+    policy: GlobalPolicyMode
+    affected_count: int
 
 @dataclass
 class AuditCompleteEvent:
@@ -223,7 +261,11 @@ class LogEvent:
 ```
 
 ### 5.2 核心模組配接與非同步化
+- **`core/mode_controller.py`（新增：技能全域開關與執行模式控制器）**：
+  - 負責解析與原子化修改各平台 `SKILL.md` 之 YAML Frontmatter（如 `activation: resident | on_demand`、`alwaysApply: true | false`）與 `config.toml` 全域狀態表。
+  - 提供單一技能即時切換 `toggle_skill_mode(skill_path, target_mode)` 與全域策略批次切換 `apply_global_policy(policy, skills)`，採用 `.tmp` 臨時檔與 `os.replace()` 確保跨平台零損毀原子寫入。
 - **`core/scanner.py`**：
+  - 擴充 `SkillEntity` 模型，新增 `execution_mode: SkillExecutionMode` 欄位，於掃描 `SKILL.md` 時自動識別該技能目前為「全域常駐執行 (`RESIDENT`)」或「特定時機調用 (`ON_DEMAND`)」。
   - 新增非同步生成器 `async_scan_skills(...)`，在掃描每 10 個技能目錄時 yield 一次進度，供 TUI 即時更新載入進度條。
 - **`core/versioning.py`**：
   - 將阻塞型 `repo.remotes.origin.fetch()` 封裝於 `asyncio.to_thread` 執行，避免網路延遲凍結 TUI 介面。
@@ -236,9 +278,10 @@ class LogEvent:
 
 ### 6.1 主要分頁與操作場景
 1. **[Tab 1] 本機技能庫 (Local Skills Browser)**：
-   - **清單面板**：以 `Tree` 或帶有顏色標記之 `DataTable` 呈現名稱、平台標籤、版本狀態與合規度。
-   - **快捷搜尋**：按下 `/` 立即聚焦過濾框，支援依名稱或平台即時過濾。
-   - **右側雙面板**：上方顯示元數據與路徑；下方顯示完整 `SKILL.md` 渲染或 Audit Unified Diff。
+   - **清單面板**：以 `Tree` 或帶有顏色標記之 `DataTable` 呈現名稱、執行模式標籤（`[📌常駐]` / `[⚡按需]`）、平台標籤、版本狀態與合規度。
+   - **即時模式切換**：選取任一技能後按下 `Space` 或 `M`，立即在「📌 全域常駐執行」與「⚡ 特定時機調用」之間切換；按下 `G` 可喚出「全域開關策略選單」，一鍵將所有技能切換為全常駐、全按需或自訂混合模式。
+   - **快捷搜尋**：按下 `/` 立即聚焦過濾框，支援依名稱、平台或執行模式（`resident` / `on-demand`）即時過濾。
+   - **右側雙面板**：上方顯示元數據、當前執行模式與路徑；下方顯示完整 `SKILL.md` 渲染或 Audit Unified Diff。
 2. **[Tab 2] 工作流審計矩陣 (Workflow Auditor Matrix)**：
    - 自動探測當前專案之 `workflow.md`。
    - 以核取清單（Selection List）呈現所有宣告技能，使用者可逐一勾選欲補全之技能。
@@ -248,8 +291,8 @@ class LogEvent:
    - 瀏覽搜尋結果之 Star 數、下載量與標籤。
    - 按下 `[I]` 彈出安裝目標平台選擇對話框，一鍵複製或 Clone 至目標技能目錄。
 4. **[Tab 4] 系統設定 (Configuration)**：
-   - 視覺化檢視各平台目錄映射路徑。
-   - 快速切換預設輸出格式與 API Token 狀態檢驗。
+   - 視覺化檢視各平台目錄映射路徑與**全域開關策略狀態 (Global Execution Policy)**。
+   - 快速切換預設輸出格式、全域預設載入模式（新安裝技能預設為常駐或按需）與 API Token 狀態檢驗。
 
 ### 6.2 快捷動作鍵映射表 (Global Keybindings)
 
@@ -258,6 +301,8 @@ class LogEvent:
 | **`Tab` / `Shift+Tab`** | 切換焦點 | 在左側清單、右側面板、分頁列之間依序切換操作焦點 |
 | **`1` ~ `4`** | 切換分頁 | 快速切換至「本機技能」、「工作流審計」、「遠端市集」、「系統設定」 |
 | **`Enter`** | 深入檢視 / 確認 | 展開詳細資訊、確認對話框操作 |
+| **`Space` / `M`** | **切換執行模式 (Mode Toggle)** | **即時切換選定技能於「📌 全域常駐執行 (`RESIDENT`)」或「⚡ 特定時機調用 (`ON_DEMAND`)」** |
+| **`G`** | **全域開關 (Global Switch)** | **開啟全域執行策略開關（一鍵切換：全數常駐 / 全數特定時機調用 / 個別自訂混合模式）** |
 | **`A`** | 結構審計 (Audit) | 比對選定技能之 `index.md`，即時在右下方渲染 Unified Diff |
 | **`C`** | 自動補全 (Complete) | 彈出安全確認對話框，確認後以原子替換補全缺失章節與目錄骨架 |
 | **`U`** | 安全升級 (Upgrade) | 檢查工作區變更，建立快照備份標籤並重置至遠端最新 Commit |
@@ -267,30 +312,64 @@ class LogEvent:
 | **`F5`** | 重新掃描 (Refresh) | 觸發非同步重新掃描，更新所有技能最新狀態 |
 | **`Q` / `Esc`** | 退出 (Quit) | 安全退出 TUI 應用程式，乾淨復原終端螢幕 |
 
+### 6.3 技能全域開關與執行模式切換規範 (Global Execution Mode Switch Specification)
+
+為解決多技能環境下 Context Token 膨脹與規範衝突問題，系統提供雙層級（全域總開關 + 個別技能開關）之執行模式控制：
+
+1. **兩種核心執行模式定義**：
+   - **📌 全域常駐執行 (`RESIDENT` / Always-On)**：
+     - **行為**：Agent 啟動任何會話時皆預設載入此技能之核心規則與指令，適用於「資安防禦規範」、「全域編碼風格」、「提交訊息慣例」等基礎常駐技能。
+     - **底層映射**：於 `SKILL.md` Frontmatter 寫入 `activation: resident` 與 `alwaysApply: true`，並於 `config.toml` 的 `[skill_modes]` 標記為 `resident`。
+   - **⚡ 特定時機調用 (`ON_DEMAND` / Triggered Invocation)**：
+     - **行為**：平時僅向 Agent 暴露極簡名稱與觸發描述（Metadata），僅在對話語境符合 `description` 觸發條件、或使用者明確透過 `/skill` 點名調用時才動態載入完整 `SKILL.md` 內容，大幅節省 Context 視窗空間。
+     - **底層映射**：於 `SKILL.md` Frontmatter 寫入 `activation: on_demand` 與 `alwaysApply: false`，並於 `config.toml` 的 `[skill_modes]` 標記為 `on_demand`。
+2. **全域總開關 (Global Master Switch)**：
+   - **全數常駐模式 (`ALL_RESIDENT`)**：強制將工作區或指定平台下所有技能切換為常駐載入。
+   - **全數按需模式 (`ALL_ON_DEMAND`)**：一鍵將所有技能轉為特定時機調用（適合極限節省 Token 或排查規則衝突時使用），同時完整保留使用者原先在 `config.toml` 中的個別偏好快照，切回 `CUSTOM` 時可無損還原。
+   - **自訂混合調度 (`CUSTOM`，預設)**：依據每個技能各自設定的 `RESIDENT` 或 `ON_DEMAND` 狀態獨立運作。
+3. **CLI 與 TUI 雙模對齊指令**：
+   - TUI 介面：透過 `[Space]` / `[M]` 單項切換，或透過 `[G]` 切換全域總開關，狀態列與清單徽章即時無閃爍更新。
+   - CLI 指令：新增 `skill-manager mode` 子命令，支援腳本化批次控制：
+     ```bash
+     # 切換單一技能為全域常駐執行
+     skill-manager mode <skill-name> --set resident
+
+     # 切換單一技能為特定時機調用
+     skill-manager mode <skill-name> --set on-demand
+
+     # 切換全域總開關為「全數特定時機調用」
+     skill-manager mode --global all-on-demand --platform all --format json
+     ```
+
 ---
 
 ## 7. 分階段實施工作分解 (Work Breakdown Structure, WBS)
 
 ```text
-v0.3.0 TUI 現代化實施排程
-├── [階段 1] 核心模組事件化與非同步配接層
-│   ├── 新增 src/skill_manager/events.py 定義標準 UI 事件與資料類別
+v0.3.0 TUI 現代化與全域技能開關實施排程
+├── [階段 1] 核心模組事件化、執行模式控制器與非同步配接層
+│   ├── 擴充 src/skill_manager/models.py 新增 SkillExecutionMode 與 GlobalPolicyMode
+│   ├── 新增 src/skill_manager/core/mode_controller.py 實作常駐/按需原子切換與全域開關邏輯
+│   ├── 新增 src/skill_manager/events.py 定義標準 UI 事件與模式切換事件類別
 │   ├── 於 src/skill_manager/core/ 建立 async_adapter.py 封裝非同步 Worker
 │   └── 確保現行 93 項單元與整合測試維持 100% 通過（無回歸破壞）
 ├── [階段 2] Textual TUI 主應用與核心元件開發
-│   ├── 建立 src/skill_manager/tui/app.py 主應用框架與自訂 TCSS 樣式
-│   ├── 實作 src/skill_manager/tui/widgets/skill_tree.py (技能清單元件)
+│   ├── 建立 src/skill_manager/tui/app.py 主應用框架、Header 全域開關狀態列與 TCSS 樣式
+│   ├── 實作 src/skill_manager/tui/widgets/skill_tree.py (含 [📌常駐]/[⚡按需] 即時切換元件)
+│   ├── 實作 src/skill_manager/tui/widgets/global_switch_modal.py (全域開關策略切換彈窗)
 │   ├── 實作 src/skill_manager/tui/widgets/diff_viewer.py (Unified Diff 語法高亮檢視器)
 │   ├── 實作 src/skill_manager/tui/widgets/workflow_view.py (工作流互動矩陣)
 │   └── 實作跨平台原生檔案瀏覽器調用函式 (Windows/macOS/Linux)
 ├── [階段 3] 雙模入口整合與 CLI 無縫降級
 │   ├── 升級 src/skill_manager/cli.py：
 │   │   ├── 新增 skill-manager tui 指令
+│   │   ├── 新增 skill-manager mode 指令 (支援單一技能與 --global 全域開關切換)
 │   │   ├── 當無子指令且具備 TTY 時，預設直接啟動 TUI 介面
 │   │   └── 新增 --no-tui 旗標與 isatty() 判定，無 TTY 時安全降級為經典 Help 輸出
 │   └── pyproject.toml 更新相依宣告 (textual>=0.80.0)
 └── [階段 4] 自動化測試、資安掃描與容器驗證
-    ├── 新增 tests/unit/test_tui_app.py (使用 Textual Pilot 進行虛擬終端自動化測試)
+    ├── 新增 tests/unit/test_mode_controller.py 驗證常駐/按需切換、YAML 原子更新與快照還原
+    ├── 新增 tests/unit/test_tui_app.py (使用 Textual Pilot 進行虛擬終端與快捷鍵自動化測試)
     ├── 執行多輪回歸測試 (R1-R3) 與代碼行覆蓋率檢核 (維持整體 >= 80%, 核心 >= 90%)
     ├── 執行階段 4 資安審查 (uv audit 確認 0 CVE, 驗證路徑與指令防護)
     ├── 更新 Dockerfile 與 docker-compose.yml 驗證容器內 TUI 交互
@@ -329,4 +408,8 @@ v0.3.0 TUI 現代化實施排程
   - **Given**：完成 TUI 相關代碼與套件擴充。
   - **When**：執行全專案自動化測試與資安掃描。
   - **Then**：既有 93 項測試案例 100% 通過，新增 TUI Pilot 測試案例全數通過，全套件覆蓋率維持 ≥ 85%，`uv audit` 維持 0 已知弱點。
+- [ ] **AC-TUI-08 (技能全域開關與常駐/特定時機調用即時切換)**：
+  - **Given**：使用者於 TUI 清單選取任一技能按下 `[Space]` / `[M]`，或按下 `[G]` 切換全域開關（亦可透過 CLI 執行 `skill-manager mode`）。
+  - **When**：觸發「全域常駐執行 (`RESIDENT`)」與「特定時機調用 (`ON_DEMAND`)」狀態切換。
+  - **Then**：系統以原子寫入同步更新目標 `SKILL.md` Frontmatter（`activation` 與 `alwaysApply` 屬性）及 `config.toml` 狀態紀錄，TUI 介面徽章（`[📌常駐]` / `[⚡按需]`）與頂部全域狀態列即時更新；當自全按需模式切回自訂混合模式時，完整還原各技能原先之常駐設定。
 
