@@ -27,6 +27,19 @@ class PlatformType(str, Enum):
     ALL = "all"
 
 
+class SkillExecutionMode(str, Enum):
+    """技能執行與調用模式定義"""
+    RESIDENT = "resident"      # 📌 全域常駐執行 (Always-On / Global Resident)
+    ON_DEMAND = "on_demand"    # ⚡ 特定時機調用 (On-Demand / Triggered Invocation)
+
+
+class GlobalPolicyMode(str, Enum):
+    """全域開關總策略模式"""
+    ALL_RESIDENT = "all_resident"    # 強制全數技能常駐執行
+    ALL_ON_DEMAND = "all_on_demand"  # 強制全數技能轉為特定時機調用 (節省 Token 模式)
+    CUSTOM = "custom"                # 依各別技能設定獨立運行 (混合調度)
+
+
 class SkillEntity(BaseModel):
     """Represents a discovered or managed skill."""
     id: str = Field(..., description="Unique skill identifier, typically dirname or namespaced")
@@ -41,6 +54,10 @@ class SkillEntity(BaseModel):
     version_status: VersionStatus = Field(default=VersionStatus.UNTRACKED, description="Current sync status")
     commit_sha: Optional[str] = Field(default=None, description="Local Git commit SHA if git repository")
     upstream_url: Optional[str] = Field(default=None, description="Upstream Git or HuggingFace remote URL")
+    execution_mode: SkillExecutionMode = Field(
+        default=SkillExecutionMode.ON_DEMAND,
+        description="Execution mode: resident (always-on) or on_demand (triggered)",
+    )
 
 
 class ScanSummary(BaseModel):
