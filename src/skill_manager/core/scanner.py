@@ -12,6 +12,7 @@ from skill_manager.models import (
     ScanResult,
     ScanSummary,
     SkillEntity,
+    SkillExecutionMode,
     VersionStatus,
 )
 
@@ -107,6 +108,13 @@ def inspect_single_skill(dir_path: Path, platform: PlatformType) -> Optional[Ski
             except Exception:
                 pass
 
+        # Determine execution mode from frontmatter
+        execution_mode = SkillExecutionMode.ON_DEMAND
+        activation_val = str(yaml_meta.get("activation", "")).strip().lower()
+        always_apply_val = yaml_meta.get("alwaysApply")
+        if activation_val == "resident" or always_apply_val is True or str(always_apply_val).lower() == "true":
+            execution_mode = SkillExecutionMode.RESIDENT
+
         return SkillEntity(
             id=dir_path.name,
             name=name,
@@ -120,6 +128,7 @@ def inspect_single_skill(dir_path: Path, platform: PlatformType) -> Optional[Ski
             version_status=version_status,
             commit_sha=commit_sha,
             upstream_url=upstream_url,
+            execution_mode=execution_mode,
         )
     except PermissionError:
         sys.stderr.write(f"ACCESS_DENIED: {dir_path}\n")

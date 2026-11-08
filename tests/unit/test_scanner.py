@@ -8,7 +8,7 @@ from skill_manager.core.scanner import (
     parse_yaml_frontmatter,
     scan_skills,
 )
-from skill_manager.models import PlatformType, VersionStatus
+from skill_manager.models import PlatformType, SkillExecutionMode, VersionStatus
 
 
 @pytest.mark.r1
@@ -78,3 +78,28 @@ def test_parse_yaml_frontmatter_corrupted(temp_dir):
     assert meta == {}
     assert "Body" in body or body == ""
 
+
+
+def test_scanner_detects_execution_mode(temp_dir):
+    """Test scanner correctly parses execution_mode (RESIDENT vs ON_DEMAND)."""
+    # 1. Resident via activation
+    skill_res = temp_dir / "res_skill"
+    skill_res.mkdir()
+    (skill_res / "SKILL.md").write_text("---\nname: res-skill\nactivation: resident\n---\n# Body\n", encoding="utf-8")
+
+    # 2. Resident via alwaysApply
+    skill_apply = temp_dir / "apply_skill"
+    skill_apply.mkdir()
+    (skill_apply / "SKILL.md").write_text("---\nname: apply-skill\nalwaysApply: true\n---\n# Body\n", encoding="utf-8")
+
+    # 3. On-demand default
+    skill_ondemand = temp_dir / "ondemand_skill"
+    skill_ondemand.mkdir()
+    (skill_ondemand / "SKILL.md").write_text("---\nname: ondemand-skill\n---\n# Body\n", encoding="utf-8")
+
+    res = scan_skills(platform=PlatformType.UNIVERSAL, custom_paths=[str(temp_dir)])
+    skill_map = {s.name: s.execution_mode for s in res.skills}
+
+    assert skill_map.get("res-skill") == SkillExecutionMode.RESIDENT
+    assert skill_map.get("apply-skill") == SkillExecutionMode.RESIDENT
+    assert skill_map.get("ondemand-skill") == SkillExecutionMode.ON_DEMAND
