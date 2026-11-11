@@ -31,7 +31,17 @@ from skill_manager.core.workflow_auditor import (
     audit_workflow_skills,
     complete_workflow_skills,
 )
-from skill_manager.models import PlatformType, VersionStatus, WorkflowSkillStatus
+from skill_manager.core.mode_controller import (
+    toggle_skill_mode,
+    apply_global_policy,
+)
+from skill_manager.models import (
+    GlobalPolicyMode,
+    PlatformType,
+    SkillExecutionMode,
+    VersionStatus,
+    WorkflowSkillStatus,
+)
 
 app = typer.Typer(
     name="skill-manager",
@@ -40,6 +50,34 @@ app = typer.Typer(
 )
 console = Console()
 err_console = Console(stderr=True)
+
+
+@app.callback(invoke_without_command=True)
+def main(
+    ctx: typer.Context,
+    no_tui: bool = typer.Option(False, "--no-tui", help="Disable TUI on root invocation"),
+    version: bool = typer.Option(False, "--version", "-v", help="Show version"),
+):
+    """Cross-platform Local AI Skills & Plugins Manager root entrypoint."""
+    if version:
+        from skill_manager import __version__
+        console.print(f"skill-manager v{__version__}")
+        raise typer.Exit(code=0)
+
+    if ctx.invoked_subcommand is None:
+        # User executed `skill-manager` directly without subcommands
+        if not no_tui and sys.stdin.isatty():
+            try:
+                from skill_manager.tui.app import SkillManagerApp
+                tui_app = SkillManagerApp()
+                tui_app.run()
+                raise typer.Exit(code=0)
+            except Exception as e:
+                err_console.print(f"[yellow]TUI initialization skipped: {e}[/yellow]")
+
+        # Safe fallback to help in non-interactive / pipeline / --no-tui mode (EC-11)
+        console.print(ctx.get_help())
+        raise typer.Exit(code=0)
 
 
 def _output(data: dict, format_type: str, render_table_fn):
@@ -431,6 +469,164 @@ def healthcheck(
         console.print(f"[bold green]HEALTHY (200)[/bold green] - skill-manager v{__version__} (Python {payload['python']})")
 
     _output(payload, format, render)
+    raise typer.Exit(code=0)
+
+
+@app.command()
+def mode(
+    skill: Optional[str] = typer.Argument(None, help="Target skill directory path or name"),
+    set_mode: Optional[str] = typer.Option(None, "--set", "-s", help="Target mode: resident or on_demand"),
+    policy: Optional[str] = typer.Option(None, "--policy", help="Global policy: all_resident, all_on_demand, restore_last"),
+    platform: str = typer.Option("all", "--platform", "-p", help="Target platform (claude, antigravity, codex, cursor, universal, all)"),
+    paths: Optional[List[str]] = typer.Option(None, "--path", "--custom-paths", help="Custom paths to scan"),
+    config: Optional[str] = typer.Option(None, "--config", "-c", help="Config file path"),
+    format: str = typer.Option("table", "--format", "-f", help="Output format: table or json"),
+):
+    """Inspect or toggle skill execution mode and apply global policy (FR-07, FR-08, FR-13)."""
+    cfg = load_config(config)
+    try:
+        plat_enum = PlatformType(platform.lower())
+    except ValueError:
+        err_console.print(f"[bold red]VALIDATION_ERROR:[/bold red] Invalid platform '{platform}'.")
+        raise typer.Exit(code=2)
+
+    # 1. Handle global policy application
+    if policy:
+        try:
+            pol_enum = GlobalPolicyMode(policy.lower())
+        except ValueError:
+            err_console.print(f"[bold red]VALIDATION_ERROR:[/bold red] Invalid policy '{policy}'. Choose: all_resident, all_on_demand, restore_last")
+            raise typer.Exit(code=2)
+
+        scan_res = scan_skills(platform=plat_enum, custom_paths=paths, config=cfg)
+        ev = apply_global_policy(pol_enum, scan_res.skills, platform=plat_enum, config_path=config)
+
+        payload = {
+            "policy": ev.policy.value if hasattr(ev.policy, "value") else str(ev.policy),
+            "affected_count": ev.affected_count,
+            "success": ev.success,
+            "error_message": ev.error_message,
+        }
+
+        def render():
+            if ev.success:
+                console.print(f"[bold green]Applied global policy '{ev.policy.value}' to {ev.affected_count} skills.[/bold green]")
+            else:
+                err_console.print(f"[bold red]Global policy failed:[/bold red] {ev.error_message}")
+
+        _output(payload, format, render)
+        if not ev.success:
+            raise typer.Exit(code=1)
+        raise typer.Exit(code=0)
+
+    # 2. Handle single skill mode toggling
+    if skill and set_mode:
+        try:
+            target_mode = SkillExecutionMode(set_mode.lower())
+        except ValueError:
+            err_console.print(f"[bold red]VALIDATION_ERROR:[/bold red] Invalid mode '{set_mode}'. Choose: resident or on_demand")
+            raise typer.Exit(code=2)
+
+        skill_path = Path(skill)
+        if not skill_path.exists():
+            # Try to find skill by name among scanned skills
+            scan_res = scan_skills(platform=plat_enum, config=cfg)
+            matched = [s for s in scan_res.skills if s.name.lower() == skill.lower() or s.id.lower() == skill.lower()]
+            if matched:
+                skill_path = Path(matched[0].path)
+            else:
+                err_console.print(f"[bold red]ERR_SKILL_NOT_FOUND:[/bold red] Skill '{skill}' not found.")
+                raise typer.Exit(code=2)
+
+        ev_toggle = toggle_skill_mode(skill_path, target_mode, config_path=config)
+        payload = {
+            "skill_name": ev_toggle.skill_name,
+            "platform": ev_toggle.platform,
+            "old_mode": ev_toggle.old_mode.value,
+            "new_mode": ev_toggle.new_mode.value,
+            "success": ev_toggle.success,
+            "error_message": ev_toggle.error_message,
+        }
+
+        def render():
+            if ev_toggle.success:
+                console.print(f"[bold green]Updated {ev_toggle.skill_name}:[/bold green] {ev_toggle.old_mode.value} -> [bold yellow]{ev_toggle.new_mode.value}[/bold yellow]")
+            else:
+                err_console.print(f"[bold red]Failed to toggle mode:[/bold red] {ev_toggle.error_message}")
+
+        _output(payload, format, render)
+        if not ev_toggle.success:
+            raise typer.Exit(code=1)
+        raise typer.Exit(code=0)
+
+    # 3. List skills and their execution modes
+    scan_res = scan_skills(platform=plat_enum, custom_paths=paths, config=cfg)
+    if skill:
+        # Filter for the single requested skill
+        skills_to_show = [s for s in scan_res.skills if s.name.lower() == skill.lower() or s.id.lower() == skill.lower() or s.path == str(Path(skill).resolve())]
+        if not skills_to_show:
+            err_console.print(f"[bold red]ERR_SKILL_NOT_FOUND:[/bold red] Skill '{skill}' not found.")
+            raise typer.Exit(code=2)
+    else:
+        skills_to_show = scan_res.skills
+
+    def render_list():
+        table = Table(title="Skills Execution Modes")
+        table.add_column("Skill Name", style="bold green")
+        table.add_column("Platform", style="magenta")
+        table.add_column("Mode", style="bold yellow")
+        table.add_column("Path", style="dim")
+        for s in skills_to_show:
+            icon = "📌" if s.execution_mode == SkillExecutionMode.RESIDENT else "⚡"
+            table.add_row(s.name, s.platform.value, f"{icon} {s.execution_mode.value}", s.path)
+        console.print(table)
+        console.print(f"Total: {len(skills_to_show)} skills")
+
+    data = {
+        "skills": [
+            {
+                "id": s.id,
+                "name": s.name,
+                "platform": s.platform.value,
+                "execution_mode": s.execution_mode.value,
+                "path": s.path,
+            }
+            for s in skills_to_show
+        ]
+    }
+    _output(data, format, render_list)
+    raise typer.Exit(code=0)
+
+
+@app.command()
+def tui(
+    ctx: typer.Context,
+    no_tui: bool = typer.Option(False, "--no-tui", help="Disable TUI and fallback to CLI output"),
+    config: Optional[str] = typer.Option(None, "--config", "-c", help="Config file path"),
+    platform: str = typer.Option("all", "--platform", "-p", help="Target platform"),
+    paths: Optional[List[str]] = typer.Option(None, "--path", "--custom-paths", help="Custom paths to scan"),
+):
+    """Launch interactive Textual TUI dashboard (FR-10, FR-13, EC-11)."""
+    # EC-11: Environment compatibility check (no TTY or --no-tui)
+    if no_tui or not sys.stdin.isatty():
+        console.print("[dim]Non-interactive environment or --no-tui specified. Safe fallback to CLI help.[/dim]")
+        console.print(ctx.get_help())
+        raise typer.Exit(code=0)
+
+    try:
+        from skill_manager.tui.app import SkillManagerApp
+    except ImportError as ie:
+        err_console.print(f"[bold red]TUI dependencies not available:[/bold red] {ie}")
+        raise typer.Exit(code=1)
+
+    cfg = load_config(config)
+    try:
+        plat_enum = PlatformType(platform.lower())
+    except ValueError:
+        plat_enum = PlatformType.ALL
+
+    tui_app = SkillManagerApp(config=cfg, custom_paths=paths, platform=plat_enum)
+    tui_app.run()
     raise typer.Exit(code=0)
 
 
