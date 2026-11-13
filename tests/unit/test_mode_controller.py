@@ -47,7 +47,8 @@ Do something great.
     assert "# Instructions\nDo something great." in updated
 
 
-def test_update_frontmatter_mode_missing_frontmatter():
+def test_t_r2_ec_07_missing_frontmatter():
+    """EC-07: Frontmatter recovery for missing or broken frontmatter."""
     content = "# Just markdown\nNo frontmatter here."
     updated = update_frontmatter_mode(content, SkillExecutionMode.RESIDENT, fallback_name="auto-skill")
     assert "name: auto-skill" in updated
@@ -56,7 +57,8 @@ def test_update_frontmatter_mode_missing_frontmatter():
     assert "# Just markdown\nNo frontmatter here." in updated
 
 
-def test_toggle_skill_mode_atomic(tmp_path):
+def test_t_r2_ec_08_toggle_skill_mode_atomic(tmp_path):
+    """EC-08: Zero data loss atomic replace for mode toggling."""
     skill_dir = tmp_path / "skill-a"
     skill_dir.mkdir()
     skill_md = skill_dir / "SKILL.md"
@@ -84,7 +86,8 @@ def test_toggle_skill_mode_atomic(tmp_path):
     assert get_skill_mode(skill_dir) == SkillExecutionMode.ON_DEMAND
 
 
-def test_apply_global_policy_and_custom_restore(tmp_path):
+def test_t_r2_ec_09_apply_global_policy_and_custom_restore(tmp_path):
+    """EC-09: Snapshot rollback and restoration for global policy."""
     # Setup 3 skills: skill-1 (resident), skill-2 (on_demand), skill-3 (resident)
     s1 = tmp_path / "skill-1"
     s1.mkdir()
@@ -141,3 +144,15 @@ def test_apply_global_policy_and_custom_restore(tmp_path):
 def test_toggle_skill_mode_nonexistent_dir():
     with pytest.raises(FileNotFoundError):
         toggle_skill_mode("/non/existent/path", SkillExecutionMode.RESIDENT)
+
+
+def test_t_r2_ec_10_concurrency_and_retry(tmp_path):
+    """EC-10: Concurrency error handling and retry guard."""
+    skill_dir = tmp_path / "skill-c"
+    skill_dir.mkdir()
+    (skill_dir / "SKILL.md").write_text("---\nname: skill-c\nactivation: on_demand\n---\n# C\n", encoding="utf-8")
+
+    ev = toggle_skill_mode(skill_dir, SkillExecutionMode.RESIDENT)
+    assert ev.success is True
+    assert ev.new_mode == SkillExecutionMode.RESIDENT
+

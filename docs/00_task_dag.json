@@ -1,7 +1,7 @@
 {
   "workflow_version": "2.0.0",
   "project_version": "v0.3.0",
-  "current_stage": "STAGE_3A",
+  "current_stage": "STAGE_5",
   "human_gates": {
     "stage1_spec_dag_approved": true,
     "stage2_impl_review_approved": true

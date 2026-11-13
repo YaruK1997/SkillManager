@@ -30,7 +30,8 @@ def test_open_folder_nonexistent():
 
 
 @patch("subprocess.Popen")
-def test_open_folder_mocked_success(mock_popen, tmp_path):
+def test_t_r2_ec_13_open_folder_command_injection_safeguard(mock_popen, tmp_path):
+    """EC-13: Command injection guard with no shell=True."""
     mock_proc = MagicMock()
     mock_popen.return_value = mock_proc
 

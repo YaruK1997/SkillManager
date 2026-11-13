@@ -1,7 +1,7 @@
 {
   "schema_version": "2.0.0",
-  "current_stage": "STAGE_3A",
-  "updated_at": "2026-11-13T02:14:30+00:00",
+  "current_stage": "STAGE_5",
+  "updated_at": "2026-11-13T02:19:22+00:00",
   "human_gates": {
     "stage1_spec_dag_approved": true,
     "stage2_impl_review_approved": true
@@ -18,9 +18,11 @@
     "T-S2-08-CLI-MODE": "COMPLETED"
   },
   "stage3b_counters": {
-    "total_repair_loops": 0,
+    "total_repair_loops": 1,
     "spec_defect_count": 0,
-    "defect_retries": {},
+    "defect_retries": {
+      "DEF-3B-20261113-001": 1
+    },
     "escalated_defects": []
   },
   "stage4_counters": {

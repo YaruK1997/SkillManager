@@ -229,7 +229,28 @@ class Stage3BRunner:
             log_file.write_text("Tests directory not found.\n", encoding="utf-8")
             return 0, "No tests directory found.", log_file, {}
 
-        cmd = [sys.executable, "-m", "unittest", "discover", "-s", "tests", "-v"]
+        has_pytest = False
+        try:
+            import pytest  # noqa: F401
+            has_pytest = True
+        except ImportError:
+            has_pytest = False
+
+        if has_pytest:
+            cov_file = self.root / ".scratch" / "coverage.json"
+            cov_file.parent.mkdir(parents=True, exist_ok=True)
+            cmd = [
+                sys.executable,
+                "-m",
+                "pytest",
+                "tests/unit",
+                "-v",
+                "--cov=skill_manager",
+                f"--cov-report=json:{cov_file}",
+            ]
+        else:
+            cmd = [sys.executable, "-m", "unittest", "discover", "-s", "tests", "-v"]
+
         try:
             proc = subprocess.run(
                 cmd,
@@ -249,12 +270,18 @@ class Stage3BRunner:
 
     @staticmethod
     def _parse_unittest_outcomes(output: str) -> dict[str, str]:
-        """從 `unittest -v` 輸出解析每個測試案例之結果 (`ok` / `FAIL` / `ERROR`)。"""
+        """從 `unittest -v` 或 `pytest -v` 輸出解析每個測試案例之結果 (`ok` / `FAIL` / `ERROR`)。"""
         outcomes: dict[str, str] = {}
         pattern = re.compile(r"^(test_[a-zA-Z0-9_]+)\s+\(([^)]+)\).*?\.\.\.\s+(ok|FAIL|ERROR)\s*$", re.MULTILINE)
         for match in pattern.finditer(output):
             func_name, cls_name, status = match.group(1), match.group(2), match.group(3)
             outcomes[f"{cls_name}.{func_name}"] = status
+
+        p_pattern = re.compile(r"^([^\s:]+::[^\s]+)\s+(PASSED|FAILED|ERROR)", re.MULTILINE)
+        for match in p_pattern.finditer(output):
+            tid, status = match.group(1), match.group(2)
+            outcomes[tid] = "ok" if status == "PASSED" else ("FAIL" if status == "FAILED" else "ERROR")
+
         return outcomes
 
     def _check_coverage(self, gates: dict[str, Any], raw_log_rel: str) -> list[dict[str, Any]]:
