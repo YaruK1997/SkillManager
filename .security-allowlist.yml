@@ -1,0 +1,9 @@
+# 階段 4 資訊安全豁免清單 (新增項目須經人類使用者核可，缺少欄位或已過期之項目將自動失效並阻擋放行)
+# 格式範例：
+# allowlist:
+#   - id: CWE-78-SHELL-TRUE
+#     file: src/legacy/runner.py
+#     reason: 僅於受控內部容器啟動參數使用，已過濾白名單字元
+#     approved_by: human_reviewer
+#     expires_at: 2027-12-31
+allowlist: []

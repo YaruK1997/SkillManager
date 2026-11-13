@@ -137,3 +137,82 @@ Skill-manager/
 5. **里程碑 5**：TASK-06 完成，工作流技能依賴解析、比對、自動補全與 CLI `workflow-audit` 整合通過測試。
 6. **里程碑 6**：全量自動化測試執行，行覆蓋率達到 ≥ 80%，核心模組達到 ≥ 90%。
 
+
+
+---
+
+## 5. v0.3.0 實作任務規劃 (TUI 現代化與技能全域執行開關)
+
+依據 `docs/08_update_plan.md`，v0.3.0 拆解為以下獨立實作任務，支援平行 Worktree 隔離開發：
+
+### 任務群組 8：核心模型擴充與事件定義 (T-S2-01-MODEL - 支援 FR-07, FR-09)
+- **目標**：在 `models.py` 新增 `SkillExecutionMode` 與 `GlobalPolicyMode`；新增 `events.py` 定義型別安全之 UI 事件。
+- **子任務**：
+  - `T-S2-01-01`：於 `src/skill_manager/models.py` 新增 `SkillExecutionMode`（`RESIDENT` / `ON_DEMAND`）與 `GlobalPolicyMode`（`ALL_RESIDENT` / `ALL_ON_DEMAND` / `CUSTOM`），擴充 `SkillEntity` 新增 `execution_mode` 欄位。
+  - `T-S2-01-02`：新增 `src/skill_manager/events.py`，定義 `ScanProgressEvent`、`SkillSelectedEvent`、`SkillModeChangedEvent`、`GlobalPolicyChangedEvent`、`AuditCompleteEvent`、`VersionUpdateEvent`、`LogEvent`。
+- **對應測試 ID**：`T-R1-AC-07`, `T-R1-AC-09`。
+- **驗證方式**：編寫 `tests/unit/test_events_and_models.py` 驗證事件建構與型別序列化。
+
+### 任務群組 9：技能執行模式控制器 (T-S2-02-MODE - 支援 FR-07, FR-08)
+- **目標**：新增 `src/skill_manager/core/mode_controller.py`，實作單一技能常駐/按需原子切換與全域策略總開關。
+- **子任務**：
+  - `T-S2-02-01`：實作 `toggle_skill_mode(skill_path, target_mode)`，以正則或 YAML AST 安全更新 `SKILL.md` 之 `activation` 與 `alwaysApply` 屬性，使用 `.tmp` 與 `os.replace` 原子替換。
+  - `T-S2-02-02`：實作 `apply_global_policy(policy, skills, platform)`，批次切換全數常駐或全數按需，並於 `config.toml` 之 `[skill_modes]` 留存個別偏好快照，切回 `CUSTOM` 時完整還原。
+- **對應測試 ID**：`T-R1-AC-07`, `T-R1-AC-08`, `T-R2-EC-07`, `T-R2-EC-08`, `T-R2-EC-09`, `T-R2-EC-10`。
+- **驗證方式**：編寫 `tests/unit/test_mode_controller.py` 驗證原子寫入、語法損毀保護、快照儲存與精確還原。
+
+### 任務群組 10：掃描引擎模式識別 (T-S2-03-SCANNER - 支援 FR-07)
+- **目標**：擴充 `src/skill_manager/core/scanner.py`，於掃描目錄時自動自 `SKILL.md` YAML Frontmatter 識別該技能之執行模式。
+- **子任務**：
+  - `T-S2-03-01`：解析 `activation`（`resident` -> `RESIDENT`）與 `alwaysApply`（`true` -> `RESIDENT`），若未宣告則預設為 `ON_DEMAND`。
+  - `T-S2-03-02`：將模式資訊封裝入 `SkillEntity.execution_mode`。
+- **對應測試 ID**：`T-R1-AC-07`。
+- **驗證方式**：更新 `tests/unit/test_scanner.py` 驗證不同 YAML 配置下的模式解析。
+
+### 任務群組 11：非同步核心配接層 (T-S2-04-ASYNC - 支援 FR-09)
+- **目標**：新增 `src/skill_manager/core/async_adapter.py`，封裝耗時作業為非同步 Worker 與生成器。
+- **子任務**：
+  - `T-S2-04-01`：實作 `async_scan_skills` 非同步生成器，提供進度回呼。
+  - `T-S2-04-02`：封裝 `async_check_version`，使用 `asyncio.to_thread` 執行 Git fetch，設定 5 秒超時防護。
+  - `T-S2-04-03`：封裝非同步遠端市集搜尋與工作流審計。
+- **對應測試 ID**：`T-R1-AC-09`, `T-R2-EC-12`。
+- **驗證方式**：編寫 `tests/unit/test_async_adapter.py` 驗證非同步協程與超時取消行為。
+
+### 任務群組 12：Textual TUI 主應用與佈局 (T-S2-05-TUI-APP - 支援 FR-10)
+- **目標**：實作 `src/skill_manager/tui/app.py`，建立雙欄響應式佈局、頂部狀態列、分頁容器與全域快捷鍵。
+- **子任務**：
+  - `T-S2-05-01`：宣告 `SkillManagerApp` 繼承 `textual.app.App`，配置 TCSS 樣式。
+  - `T-S2-05-02`：實作 Header 元件，即時顯示版本、當前全域策略狀態列（📌常駐/⚡按需計數）與快捷鍵導覽。
+  - `T-S2-05-03`：配置 TabbedContent，包含四大分頁：本機技能庫、工作流審計、遠端市集、系統設定。
+- **對應測試 ID**：`T-R1-AC-10`, `T-R2-EC-14`。
+- **驗證方式**：使用 Textual Pilot 自動化測試框架測試應用程式初始化、快捷鍵與分頁切換。
+
+### 任務群組 13：TUI 互動元件庫 (T-S2-06-TUI-WIDGETS - 支援 FR-10, FR-11, FR-12)
+- **目標**：實作各分頁專屬 Widget。
+- **子任務**：
+  - `T-S2-06-01`：`src/skill_manager/tui/widgets/skill_tree.py`，呈現技能名稱、模式徽章（`[📌常駐]` / `[⚡按需]`）、狀態標籤，綁定 `Space/M` 模式切換。
+  - `T-S2-06-02`：`src/skill_manager/tui/widgets/diff_viewer.py`，語法高亮渲染 Unified Diff 與缺失結構。
+  - `T-S2-06-03`：`src/skill_manager/tui/widgets/global_switch_modal.py`，彈窗選擇全域策略（全常駐/全按需/自訂）。
+  - `T-S2-06-04`：`src/skill_manager/tui/widgets/workflow_view.py`，工作流依賴矩陣與選擇性補全。
+- **對應測試 ID**：`T-R1-AC-10`, `T-R1-AC-11`, `T-R1-AC-12`。
+- **驗證方式**：編寫各 Widget 之 Textual Pilot 單元測試。
+
+### 任務群組 14：原生檔案總管開啟模組 (T-S2-07-PLATFORM-OPEN - 支援 FR-14)
+- **目標**：實作跨平台原生檔案總管開啟函式。
+- **子任務**：
+  - `T-S2-07-01`：判斷 Windows (`explorer.exe`)、macOS (`open`)、Linux (`xdg-open`)。
+  - `T-S2-07-02`：路徑防護與轉義，禁止 `shell=True`，杜絕注入與崩潰。
+- **對應測試 ID**：`T-R1-AC-14`, `T-R2-EC-13`。
+- **驗證方式**：編寫 `tests/unit/test_platform_open.py` 驗證不同 OS 下之命令引數組裝。
+
+### 任務群組 15：雙模入口整合與 CLI mode 指令 (T-S2-08-CLI-MODE - 支援 FR-13)
+- **目標**：升級 `src/skill_manager/cli.py`，新增 `mode` 指令、`tui` 指令與無 TTY 降級。
+- **子任務**：
+  - `T-S2-08-01`：新增 `skill-manager mode` 指令，支援單一技能與 `--global` 全域開關切換及 `--format json`。
+  - `T-S2-08-02`：新增 `skill-manager tui` 指令；當無子指令且 `sys.stdin.isatty()` 時預設啟動 TUI；無 TTY 或指定 `--no-tui` 時降級輸出 Help。
+- **對應測試 ID**：`T-R1-AC-13`, `T-R2-EC-11`。
+- **驗證方式**：使用 `CliRunner` 測試無 TTY 環境與各子指令輸出。
+
+### 任務群組 16：相依更新與發布準備 (T-S2-09-DEPS)
+- **目標**：更新 `pyproject.toml`，新增 `textual>=0.80.0`，版本升級至 `0.3.0`。
+- **驗證方式**：容器內執行 `uv lock` 與全套件測試。

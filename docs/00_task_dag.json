@@ -1,0 +1,256 @@
+{
+  "workflow_version": "2.0.0",
+  "project_version": "v0.3.0",
+  "current_stage": "STAGE_5",
+  "human_gates": {
+    "stage1_spec_dag_approved": true,
+    "stage2_impl_review_approved": true
+  },
+  "tasks": [
+    {
+      "task_id": "T-S2-01-MODEL",
+      "stage": "STAGE_2",
+      "worker_role": "W3_CODER",
+      "title": "擴充核心資料模型與新增 UI 事件資料結構",
+      "depends_on": [],
+      "parallel_group": "P2_CORE",
+      "isolation": {
+        "mode": "GIT_WORKTREE",
+        "branch_name": "wt/T-S2-01-MODEL",
+        "allowed_paths": [
+          "src/skill_manager/models.py",
+          "src/skill_manager/events.py",
+          "tests/unit/test_events_and_models.py"
+        ],
+        "forbidden_paths": [
+          "gates.yml",
+          "tools/",
+          ".security-allowlist.yml"
+        ]
+      },
+      "spec_refs": {
+        "fr_ids": ["FR-07", "FR-09"],
+        "ac_ids": ["AC-07", "AC-09"],
+        "ec_ids": ["EC-07", "EC-08"]
+      },
+      "verification_cmd": "pytest tests/unit/test_events_and_models.py -v"
+    },
+    {
+      "task_id": "T-S2-02-MODE",
+      "stage": "STAGE_2",
+      "worker_role": "W3_CODER",
+      "title": "實作技能執行模式控制器與全域開關",
+      "depends_on": ["T-S2-01-MODEL"],
+      "parallel_group": "P2_LOGIC",
+      "isolation": {
+        "mode": "GIT_WORKTREE",
+        "branch_name": "wt/T-S2-02-MODE",
+        "allowed_paths": [
+          "src/skill_manager/core/mode_controller.py",
+          "tests/unit/test_mode_controller.py"
+        ],
+        "forbidden_paths": [
+          "gates.yml",
+          "tools/",
+          ".security-allowlist.yml"
+        ]
+      },
+      "spec_refs": {
+        "fr_ids": ["FR-07", "FR-08"],
+        "ac_ids": ["AC-07", "AC-08"],
+        "ec_ids": ["EC-07", "EC-08", "EC-09", "EC-10"]
+      },
+      "verification_cmd": "pytest tests/unit/test_mode_controller.py -v"
+    },
+    {
+      "task_id": "T-S2-03-SCANNER",
+      "stage": "STAGE_2",
+      "worker_role": "W3_CODER",
+      "title": "擴充掃描引擎自動識別技能執行模式",
+      "depends_on": ["T-S2-01-MODEL"],
+      "parallel_group": "P2_LOGIC",
+      "isolation": {
+        "mode": "GIT_WORKTREE",
+        "branch_name": "wt/T-S2-03-SCANNER",
+        "allowed_paths": [
+          "src/skill_manager/core/scanner.py",
+          "tests/unit/test_scanner.py"
+        ],
+        "forbidden_paths": [
+          "gates.yml",
+          "tools/",
+          ".security-allowlist.yml"
+        ]
+      },
+      "spec_refs": {
+        "fr_ids": ["FR-07"],
+        "ac_ids": ["AC-07"],
+        "ec_ids": ["EC-07"]
+      },
+      "verification_cmd": "pytest tests/unit/test_scanner.py -v"
+    },
+    {
+      "task_id": "T-S2-04-ASYNC",
+      "stage": "STAGE_2",
+      "worker_role": "W3_CODER",
+      "title": "實作非同步核心配接層與背景 Worker",
+      "depends_on": ["T-S2-01-MODEL", "T-S2-02-MODE", "T-S2-03-SCANNER"],
+      "parallel_group": "P2_ASYNC",
+      "isolation": {
+        "mode": "GIT_WORKTREE",
+        "branch_name": "wt/T-S2-04-ASYNC",
+        "allowed_paths": [
+          "src/skill_manager/core/async_adapter.py",
+          "tests/unit/test_async_adapter.py"
+        ],
+        "forbidden_paths": [
+          "gates.yml",
+          "tools/",
+          ".security-allowlist.yml"
+        ]
+      },
+      "spec_refs": {
+        "fr_ids": ["FR-09"],
+        "ac_ids": ["AC-09"],
+        "ec_ids": ["EC-12"]
+      },
+      "verification_cmd": "pytest tests/unit/test_async_adapter.py -v"
+    },
+    {
+      "task_id": "T-S2-05-TUI-APP",
+      "stage": "STAGE_2",
+      "worker_role": "W3_CODER",
+      "title": "實作 Textual TUI 主應用與響應式雙欄佈局",
+      "depends_on": ["T-S2-04-ASYNC"],
+      "parallel_group": "P2_UI",
+      "isolation": {
+        "mode": "GIT_WORKTREE",
+        "branch_name": "wt/T-S2-05-TUI-APP",
+        "allowed_paths": [
+          "src/skill_manager/tui/app.py",
+          "src/skill_manager/tui/__init__.py",
+          "tests/unit/test_tui_app.py"
+        ],
+        "forbidden_paths": [
+          "gates.yml",
+          "tools/",
+          ".security-allowlist.yml"
+        ]
+      },
+      "spec_refs": {
+        "fr_ids": ["FR-10"],
+        "ac_ids": ["AC-10"],
+        "ec_ids": ["EC-14"]
+      },
+      "verification_cmd": "pytest tests/unit/test_tui_app.py -v"
+    },
+    {
+      "task_id": "T-S2-06-TUI-WIDGETS",
+      "stage": "STAGE_2",
+      "worker_role": "W3_CODER",
+      "title": "實作 TUI 專屬 Widget (SkillTree, DiffViewer, Modal, WorkflowView)",
+      "depends_on": ["T-S2-05-TUI-APP"],
+      "parallel_group": "P2_UI_WIDGETS",
+      "isolation": {
+        "mode": "GIT_WORKTREE",
+        "branch_name": "wt/T-S2-06-TUI-WIDGETS",
+        "allowed_paths": [
+          "src/skill_manager/tui/widgets/",
+          "tests/unit/test_tui_widgets.py"
+        ],
+        "forbidden_paths": [
+          "gates.yml",
+          "tools/",
+          ".security-allowlist.yml"
+        ]
+      },
+      "spec_refs": {
+        "fr_ids": ["FR-10", "FR-11", "FR-12"],
+        "ac_ids": ["AC-10", "AC-11", "AC-12"],
+        "ec_ids": ["EC-12", "EC-14"]
+      },
+      "verification_cmd": "pytest tests/unit/test_tui_widgets.py -v"
+    },
+    {
+      "task_id": "T-S2-07-PLATFORM-OPEN",
+      "stage": "STAGE_2",
+      "worker_role": "W3_CODER",
+      "title": "實作跨平台原生檔案總管開啟模組",
+      "depends_on": [],
+      "parallel_group": "P2_UTILS",
+      "isolation": {
+        "mode": "GIT_WORKTREE",
+        "branch_name": "wt/T-S2-07-PLATFORM-OPEN",
+        "allowed_paths": [
+          "src/skill_manager/core/platform_open.py",
+          "tests/unit/test_platform_open.py"
+        ],
+        "forbidden_paths": [
+          "gates.yml",
+          "tools/",
+          ".security-allowlist.yml"
+        ]
+      },
+      "spec_refs": {
+        "fr_ids": ["FR-14"],
+        "ac_ids": ["AC-14"],
+        "ec_ids": ["EC-13"]
+      },
+      "verification_cmd": "pytest tests/unit/test_platform_open.py -v"
+    },
+    {
+      "task_id": "T-S2-08-CLI-MODE",
+      "stage": "STAGE_2",
+      "worker_role": "W3_CODER",
+      "title": "升級 CLI 整合 mode/tui 指令與無 TTY 降級",
+      "depends_on": ["T-S2-02-MODE", "T-S2-05-TUI-APP", "T-S2-07-PLATFORM-OPEN"],
+      "parallel_group": "P2_CLI",
+      "isolation": {
+        "mode": "GIT_WORKTREE",
+        "branch_name": "wt/T-S2-08-CLI-MODE",
+        "allowed_paths": [
+          "src/skill_manager/cli.py",
+          "tests/unit/test_cli_mode.py"
+        ],
+        "forbidden_paths": [
+          "gates.yml",
+          "tools/",
+          ".security-allowlist.yml"
+        ]
+      },
+      "spec_refs": {
+        "fr_ids": ["FR-13"],
+        "ac_ids": ["AC-13"],
+        "ec_ids": ["EC-11"]
+      },
+      "verification_cmd": "pytest tests/unit/test_cli_mode.py -v"
+    },
+    {
+      "task_id": "T-S2-09-DEPS",
+      "stage": "STAGE_2",
+      "worker_role": "W3_CODER",
+      "title": "更新 pyproject.toml 相依 (textual>=0.80.0) 與版本號升級至 v0.3.0",
+      "depends_on": [],
+      "parallel_group": "P2_CONFIG",
+      "isolation": {
+        "mode": "GIT_WORKTREE",
+        "branch_name": "wt/T-S2-09-DEPS",
+        "allowed_paths": [
+          "pyproject.toml",
+          "src/skill_manager/__init__.py"
+        ],
+        "forbidden_paths": [
+          "gates.yml",
+          "tools/",
+          ".security-allowlist.yml"
+        ]
+      },
+      "spec_refs": {
+        "fr_ids": ["FR-10"],
+        "ac_ids": ["AC-10"],
+        "ec_ids": ["EC-11"]
+      },
+      "verification_cmd": "python -c 'import skill_manager; assert skill_manager.__version__ == \"0.3.0\"'"
+    }
+  ]
+}

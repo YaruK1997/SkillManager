@@ -453,3 +453,173 @@ SkillManager 為一套跨平台（支援 Windows、macOS、Linux）全域 AI 技
 | **FR-06** | EC-06-05 | 異常 | TASK-06-WORKFLOW-PRESERVE-SKILL | `T-R2-EC-06-05` |
 | **FR-06** | EC-06-06 | 異常 | TASK-06-WORKFLOW-ATOMIC-REPLACE | `T-R2-EC-06-06` |
 | **FR-06** | EC-06-07 | 異常 | TASK-06-WORKFLOW-PERM-DENIED | `T-R2-EC-06-07` |
+
+
+---
+
+## 9. v0.3.0 功能規格增補 (TUI 現代化與技能全域執行開關)
+
+依據 `docs/08_update_plan.md` 規劃，v0.3.0 為 SkillManager 引入現代化 Text User Interface (TUI) 常駐介面與雙層級技能執行模式控制。
+
+### FR-07: 技能執行與調用模式定義及原子切換 (Resident vs On-Demand)
+- **功能描述**：支援針對單一技能即時切換「📌 全域常駐執行 (`RESIDENT`)」與「⚡ 特定時機調用 (`ON_DEMAND`)」。以原子化安全寫入更新目標 `SKILL.md` YAML Frontmatter（`activation` 與 `alwaysApply` 欄位），並同步更新 `config.toml` 之狀態紀錄。
+- **輸入項目**：
+  - `skill_path` (Path / str): 目標技能根目錄路徑。
+  - `target_mode` (SkillExecutionMode): `RESIDENT` 或 `ON_DEMAND`。
+- **輸出項目**：
+  - `SkillModeChangedEvent` 或操作結果物件（包含舊模式、新模式、原子寫入狀態）。
+
+#### 驗收標準 (Acceptance Criteria, AC)
+- **AC-07 (正常與異常)**：
+  - **Given**：選定存在合法 `SKILL.md` 之技能目錄，目前 Frontmatter 標記為 `activation: resident` 且 `alwaysApply: true`。
+  - **When**：使用者於 TUI 按下 `[Space]` 或執行 `skill-manager mode <skill-name> --set on-demand`。
+  - **Then**：系統透過 `.tmp` 臨時檔與 `os.replace` 原子寫入 `SKILL.md`，將 Frontmatter 替換為 `activation: on_demand` 與 `alwaysApply: false`，並於 `config.toml` 紀錄 `[skill_modes]`；若原檔案無 Frontmatter 則自動安全前置補齊，無殘留臨時檔案。
+
+### FR-08: 全域開關策略切換與狀態快照還原 (Global Policy Master Switch)
+- **功能描述**：提供全域總開關，支援三種全域策略：`ALL_RESIDENT`（全數常駐）、`ALL_ON_DEMAND`（全數按需，極限節省 Token 模式）、`CUSTOM`（依個別技能偏好調度）。切換為全域策略時自動備份當前個別偏好快照，切回 `CUSTOM` 時完整無失真還原。
+- **輸入項目**：
+  - `policy` (GlobalPolicyMode): `ALL_RESIDENT`, `ALL_ON_DEMAND`, `CUSTOM`。
+  - `platform` (PlatformType): 指定作用平台（預設 `ALL`）。
+- **輸出項目**：
+  - `GlobalPolicyChangedEvent`（受影響技能數量、策略狀態、快照時間戳）。
+
+#### 驗收標準 (Acceptance Criteria, AC)
+- **AC-08 (正常與異常)**：
+  - **Given**：多個技能分別設定為常駐與按需之混合狀態。
+  - **When**：使用者按下 `[G]` 選擇「全數特定時機調用 (`ALL_ON_DEMAND`)」或執行 CLI `skill-manager mode --global all-on-demand`。
+  - **Then**：系統自動於 `config.toml` 儲存目前個別偏好快照，並將所有技能原子切換為 `on_demand`；當使用者後續選擇切回 `CUSTOM` 模式時，系統依據快照 100% 還原所有技能原先之個別模式。
+
+### FR-09: TUI 核心非同步配接層與事件資料系統 (Async Core Adapter & Typed Event Bus)
+- **功能描述**：建立型別安全純淨事件集合 (`src/skill_manager/events.py`) 與非同步配接器 (`src/skill_manager/core/async_adapter.py`)，將掃描、審計、Git fetch、遠端搜尋等耗時操作封裝為 Async Worker 與非同步生成器，提供進度回呼。
+- **輸入項目**：事件資料類別與回調協程。
+- **輸出項目**：非同步事件串流與任務進度回報。
+
+#### 驗收標準 (Acceptance Criteria, AC)
+- **AC-09 (正常與異常)**：
+  - **Given**：啟動 TUI 背景掃描或執行 Git remote fetch 網路請求。
+  - **When**：非同步工作執行緒（Worker）在背後運行。
+  - **Then**：事件匯流排依序派發 `ScanProgressEvent`、`VersionUpdateEvent` 等強型別事件，TUI 介面保持 60 FPS 順暢響應，無任何 Main Thread 凍結或阻塞現象。
+
+### FR-10: Textual 雙欄響應式常駐 TUI 儀表盤介面
+- **功能描述**：以 Textual 框架打造全螢幕 Alternate Screen 雙欄介面。左側為帶有徽章（🟢/🟡/🔴/⚪ 與 📌/⚡）之技能清單/樹狀圖，右上方為技能元數據面板，右下方為 Unified Diff 語法高亮檢視面板，支援 `/` 快速關鍵字篩選與 Tabbed 分頁導覽。
+- **輸入項目**：鍵盤熱鍵（`Tab`, `1-4`, `Space/M`, `G`, `A`, `C`, `U`, `R`, `O`, `/`, `Q`）與滑鼠事件。
+- **輸出項目**：響應式終端視窗渲染與彈窗互動。
+
+#### 驗收標準 (Acceptance Criteria, AC)
+- **AC-10 (正常與異常)**：
+  - **Given**：在終端執行 `skill-manager tui`。
+  - **When**：介面啟動後使用者以箭頭鍵瀏覽技能並按下 `[A]` 鍵審計。
+  - **Then**：左側徽章動態反映執行模式與健康度，右下方即時高亮呈現 Unified Diff 與缺失結構；按下 `[Q]` 退出時乾淨還原終端畫面，零殘留破版。
+
+### FR-11: 工作流矩陣互動式選擇性審計與骨架補全
+- **功能描述**：在 TUI [Tab 2] 提供工作流審計互動矩陣，自動探測專案 `workflow.md`，以多選清單（Selection List）呈現所有宣告技能，支援使用者勾選特定項目進行選擇性補全與 Diff 預覽。
+- **輸入項目**：使用者勾選技能清單、`[Enter]` 預覽、`[C]` 補全確認。
+- **輸出項目**：選擇性骨架建立與來源複製結果。
+
+#### 驗收標準 (Acceptance Criteria, AC)
+- **AC-11 (正常與異常)**：
+  - **Given**：工作流宣告 5 項技能，其中 2 項 MISSING、1 項 INCOMPLETE。
+  - **When**：使用者於矩陣中僅勾選 1 項 MISSING 技能並按下 `[C]` 鍵確認。
+  - **Then**：僅針對該勾選技能進行建立與補全，其餘項目狀態維持不變，清單即時更新為 INSTALLED。
+
+### FR-12: 遠端市集動態非同步防手震搜尋與一鍵拉取
+- **功能描述**：在 TUI [Tab 3] 提供遠端 GitHub / HuggingFace 技能市集，支援輸入即搜尋（Debounce 300ms），即時顯示 Star/下載量，並支援按下 `[I]` 彈出安裝目標平台選擇對話框執行自動拉取。
+- **輸入項目**：搜尋關鍵字、安裝目標平台。
+- **輸出項目**：遠端清單動態呈現與本機技能安裝。
+
+#### 驗收標準 (Acceptance Criteria, AC)
+- **AC-12 (正常與異常)**：
+  - **Given**：使用者於遠端市集搜尋列連續鍵入關鍵字。
+  - **When**：輸入暫停超過 300ms。
+  - **Then**：非同步客戶端送出查詢並顯示 Spinner，查詢完成後動態填充結果表格；按下 `[I]` 選擇平台後無縫 Clone/複製至本機技能目錄。
+
+### FR-13: 雙模入口整合、CLI mode 指令與無 TTY 降級機制
+- **功能描述**：整合 `src/skill_manager/cli.py`：新增 `skill-manager mode` 指令；在直接下達 `skill-manager` 且具備 TTY 時預設啟動 TUI；當環境無 TTY（管線、CI/CD）或傳入 `--no-tui` 時自動安全降級為經典 Help 輸出或純 JSON 輸出。
+- **輸入項目**：命令列旗標、標準輸入 TTY 狀態 (`sys.stdin.isatty()`)。
+- **輸出項目**：TUI 互動介面或 CLI 純文字/JSON 輸出。
+
+#### 驗收標準 (Acceptance Criteria, AC)
+- **AC-13 (正常與異常)**：
+  - **Given**：在無 TTY 環境（例如 `skill-manager scan --format json | cat`）或指定 `--no-tui`。
+  - **When**：執行指令。
+  - **Then**：系統不初始化 Textual，直接輸出標準 stdout 訊息，退出碼為 0，無任何 TTY 例外拋出。
+
+### FR-14: 跨平台原生檔案總管開啟目錄
+- **功能描述**：於 TUI 選定技能後按下 `[O]` 鍵，自動判斷作業系統類型（Windows: `explorer.exe`、macOS: `open`、Linux: `xdg-open`）呼叫原生檔案總管並聚焦目標目錄。
+- **輸入項目**：目標技能絕對路徑。
+- **輸出項目**：作業系統原生視窗開啟，異常時記錄 LogEvent。
+
+#### 驗收標準 (Acceptance Criteria, AC)
+- **AC-14 (正常與異常)**：
+  - **Given**：選定特定技能目錄。
+  - **When**：使用者按下 `[O]` 鍵。
+  - **Then**：正確調用該作業系統之對應開啟指令；若目錄不存在或路徑包含特殊字元，自動安全轉義處理，不引發 Command Injection 或程式崩潰。
+
+---
+
+## 10. 7 類邊界情境表 (Edge Cases, EC-07 ~ EC-14)
+
+| 邊界編號 | 邊界類別 | 觸發情境描述 | 預期防護行為與錯誤碼 | 對應需求 |
+| :--- | :--- | :--- | :--- | :--- |
+| **EC-07** | 空值 / 格式損毀 | 切換模式時目標 `SKILL.md` 缺少 Frontmatter 或 YAML 語法損毀 | 自動安全補全標準頭部或報告語法錯誤，不覆蓋正文內容 | FR-07 |
+| **EC-08** | 資料遺失防護 | 模式切換寫入過程中遭遇斷電或非預期中斷 | 採用 `.tmp` 寫入後 `os.replace` 原子替換，確保原檔無損 | FR-07, FR-08 |
+| **EC-09** | 狀態快照回滾 | 全域策略切換過程中部分技能寫入失敗 | 自動觸發回滾邏輯，將已修改檔案還原為切換前之快照配置 | FR-08 |
+| **EC-10** | 併發衝突 | 同時有兩個進程修改同一技能模式或 `config.toml` | 採用檔案鎖防護或捕獲 `FileExistsError` 重試 | FR-07, FR-08 |
+| **EC-11** | 環境相容性 (無 TTY) | 於 Docker 背景執行或管線重導向中啟動 TUI | 檢測 `isatty()`，自動降級為標準 CLI Help，退出碼 0 | FR-13 |
+| **EC-12** | 網路逾時 / 斷線 | 遠端市集搜尋遭遇連線逾時 (HTTP Timeout) | 捕獲例外並於狀態列顯示警告 Spinner 停止，介面不凍結 | FR-12 |
+| **EC-13** | 指令注入防護 | 開啟檔案總管之路徑包含空白或 Shell 元字元 | 嚴禁 `shell=True`，使用參數陣列傳遞至 `subprocess.Popen` | FR-14 |
+| **EC-14** | 極小視窗尺寸 | 終端視窗尺寸小於 80x24 字元 | 於畫面中央提示請調整視窗大小，避免 Grid 排版崩潰 | FR-10 |
+
+---
+
+## 11. 非功能需求增補 (NFR-06 ~ NFR-10)
+
+- **NFR-06 (啟動時間與記憶體)**：TUI 冷啟動至畫面完成渲染時間 ≤ 500ms；穩態記憶體佔用 ≤ 50MB。
+- **NFR-07 (介面流暢度)**：終端畫面更新穩態維持 60 FPS，背景 Worker 網路或 I/O 操作零凍結 Main Event Loop。
+- **NFR-08 (跨平台相容性)**：支援 Windows Terminal、macOS Terminal / iTerm2、Linux xterm-256color，支援 ANSI 24-bit TrueColor。
+- **NFR-09 (向下相容性)**：100% 保留現行所有 CLI 子指令與輸出格式，既有 112 項測試 100% 通過。
+- **NFR-10 (測試覆蓋率)**：新增模組單元測試覆蓋率 ≥ 85%，核心模式控制模組 ≥ 90%。
+
+### FR × NFR 衝突分析矩陣
+
+| 功能需求 | 可能衝突之非功能需求 | 衝突成因 | 調和與緩解策略 |
+| :--- | :--- | :--- | :--- |
+| **FR-10 (TUI 雙欄渲染)** | NFR-06 (啟動時間) | Textual CSS 解析與大量技能項目掛載節點耗時 | 採用非同步分頁/延遲掛載 (Lazy Mounting) 與純字串快取 |
+| **FR-12 (遠端市集動態搜尋)** | NFR-07 (介面流暢度) | 快速鍵入觸發大量 HTTP 請求導致 Worker 排隊 | 實作 300ms Debounce 防手震，取消未完成之上一次請求 |
+| **FR-08 (全域開關批次切換)** | NFR-09 (零破壞) | 大量修改檔案若遇中斷可能導致部分技能狀態不同步 | 採用交易式快照清單，先寫快照再批次原子替換，失敗即還原 |
+
+---
+
+## 12. v0.3.0 需求與測試追溯矩陣 (Traceability Matrix)
+
+| 功能需求編號 | 驗收標準 / 邊界編號 | 類型 | 實作任務標籤 (Phase 2) | 預定測試 ID |
+| :--- | :--- | :--- | :--- | :--- |
+| **FR-07** | AC-07 | 正常 | T-S2-02-MODE | `T-R1-AC-07` |
+| **FR-07** | EC-07 | 異常 | T-S2-02-MODE | `T-R2-EC-07` |
+| **FR-07** | EC-08 | 異常 | T-S2-02-MODE | `T-R2-EC-08` |
+| **FR-08** | AC-08 | 正常 | T-S2-02-MODE | `T-R1-AC-08` |
+| **FR-08** | EC-09 | 異常 | T-S2-02-MODE | `T-R2-EC-09` |
+| **FR-08** | EC-10 | 異常 | T-S2-02-MODE | `T-R2-EC-10` |
+| **FR-09** | AC-09 | 正常 | T-S2-04-ASYNC | `T-R1-AC-09` |
+| **FR-10** | AC-10 | 正常 | T-S2-05-TUI-APP | `T-R1-AC-10` |
+| **FR-10** | EC-14 | 異常 | T-S2-05-TUI-APP | `T-R2-EC-14` |
+| **FR-11** | AC-11 | 正常 | T-S2-06-TUI-WIDGETS | `T-R1-AC-11` |
+| **FR-12** | AC-12 | 正常 | T-S2-06-TUI-WIDGETS | `T-R1-AC-12` |
+| **FR-12** | EC-12 | 異常 | T-S2-06-TUI-WIDGETS | `T-R2-EC-12` |
+| **FR-13** | AC-13 | 正常 | T-S2-08-CLI-MODE | `T-R1-AC-13` |
+| **FR-13** | EC-11 | 異常 | T-S2-08-CLI-MODE | `T-R2-EC-11` |
+| **FR-14** | AC-14 | 正常 | T-S2-07-PLATFORM-OPEN | `T-R1-AC-14` |
+| **FR-14** | EC-13 | 異常 | T-S2-07-PLATFORM-OPEN | `T-R2-EC-13` |
+
+---
+
+## 13. 階段 2 人工審核基準表 (Stage 2 Human Review Rubric)
+
+依據 `multi_agent_workflow.md` 第 6 節規定，階段 2 實作合併後必須產出 `docs/02_human_review.md`，並逐條核對以下四大維度審核基準，取得人類簽署 Approved 後始得放行：
+
+| 審核維度 | 檢核項目與標準 | 合格條件 |
+| :--- | :--- | :--- |
+| **維度 1：AC 驗收符合度** | `AC-07` ~ `AC-14` 每一項 Given/When/Then 行為均有具體實作與測試對應 | 100% 標註對應代碼行號與測試通過證據 |
+| **維度 2：EC 7 類邊界防禦** | `EC-07` ~ `EC-14` 覆蓋空值、損毀、資料遺失、併發、無 TTY、網路逾時、路徑跳脫等情境 | 0 未捕獲未受測邊界情境，原子寫入防禦完整 |
+| **維度 3：NFR 與架構分層** | Textual UI 與核心業務邏輯 100% 透過非同步配接層與事件解耦；無阻塞主線程行為 | 模組職責清晰，啟動流暢，無循環依賴 |
+| **維度 4：相容性與無回歸** | 現行 CLI 所有指令（`scan`, `audit`, `complete`, `track` 等）行為不變，既有測試全數通過 | 既有 112 項測試 100% 通過，無 Breaking Changes |

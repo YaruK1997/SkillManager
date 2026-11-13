@@ -1,0 +1,23 @@
+# 階段 3B 與階段 4 確定性閘門門檻設定檔 (由 W2_ARCHITECT 維護，W3_CODER 嚴禁修改)
+stage3b:
+  coverage:
+    line_min: 80
+    core_min: 90
+    core_modules: [src/skill_manager/core/]
+  ec_mapping_min: 100
+  r3:
+    runs: 2
+    env: clone
+  review:
+    command: ""
+    block_on: [Critical, Important]
+  loop_limits:
+    escalate_after: 3
+    stop_same_defect: 6
+    stop_total_loops: 10
+    stop_spec_defects: 2
+
+stage4:
+  block_severity: [Critical, High, Medium]
+  allowlist: .security-allowlist.yml
+  stop_same_vuln: 3
