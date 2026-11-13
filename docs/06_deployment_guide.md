@@ -23,7 +23,7 @@
    - 映像檔僅包含編譯後之 `/opt/python` 與 `/opt/venv`，維持極簡體積。
 
 ### 2.2 服務編排與資源隔離 (`docker-compose.yml`)
-- **服務名稱**：`skill-manager`（映像檔標籤：`skill-manager:0.2.0`）
+- **服務名稱**：`skill-manager`（映像檔標籤：`skill-manager:0.3.0`）
 - **網路隔離**：綁定專屬 Bridge 網路 `skill-net`。
 - **跨平台本機專案與技能目錄掛載 (Windows / macOS / Linux)**：
   - 掛載本機專案目錄至容器工作目錄：`.:/app`，使容器內得以直接讀取主機專案之工作流定義檔與設定。
@@ -66,28 +66,24 @@ chmod +x ./deploy.sh
 [INFO] Host Claude Skills    : /Users/yaru/.claude/skills
 
 === [2/4] Building SkillManager Docker Image (macOS) ===
- Image skill-manager:0.2.0 Built
+ Image skill-manager:0.3.0 Built
 
 === [3/4] Starting SkillManager Container & Mounting Host Skills ===
  Container skill-manager Started
 
 === [4/4] Waiting for Container Healthcheck Probe ===
 Attempt 1/10 : Container status = starting
-Attempt 2/10 : Container status = healthy
+Attempt 2/10 : Container status = starting
+Attempt 3/10 : Container status = healthy
 
 === Verifying CLI Healthcheck Endpoint Inside Container ===
 {
   "status": "healthy",
   "code": 200,
-  "version": "0.2.0",
+  "version": "0.3.0",
   "python": "3.15.2"
 }
 [SUCCESS] SkillManager deployed and verified HEALTHY (200) on macOS!
-  "code": 200,
-  "version": "0.2.0",
-  "python": "3.15.2"
-}
-[SUCCESS] SkillManager deployed and verified HEALTHY (200)!
 ```
 
 ---

@@ -4,6 +4,61 @@
 
 ---
 
+## [0.3.0] - 2026-11-13
+
+### Added (新增功能)
+- **TUI 現代化全螢幕雙欄互動儀表板 (`tui.app`, `tui.widgets`) (FR-07, FR-08, FR-11, FR-14)**：
+  - **核心架構與雙模合一**：基於 `textual>=0.80.0` 打造現代化終端使用者介面 `SkillManagerApp`，雙欄響應式佈局支援左右分割、側邊摺疊與自適應流式排版；支援雙模入口，使用者執行 `skill-manager` 預設進入 TUI，支援 `--no-tui`、`--non-interactive` 或無 TTY 環境安全平滑降級至 CLI。
+  - **雙欄樹狀與差異檢視器**：
+    - `SkillTree`：以樹狀節點展示各平台技能清單、啟用狀態、常駐模式標籤（`[ALWAYS]` / `[ON_DEMAND]` / `[DISABLED]`），支援即時過濾與選取事件。
+    - `DiffViewer`：內建側邊即時語法高亮差異比對器，於切換模式或套用全域策略前提供 Before/After Diff 視覺化預覽。
+  - **全域開關互動對話框 (`GlobalSwitchModal`)**：提供全域策略快速批次切換（全域常駐 / 全域按需 / 全域禁用 / 恢復預設），並於套用前即時計算受影響技能清單與變更預覽。
+  - **工作流整合與遠端檢索面板**：
+    - `WorkflowView`：整合工作流所需技能審計與一鍵自動補全。
+    - `RemoteSearchView`：支援跨平台非同步檢索 GitHub 與 Hugging Face 技能倉庫。
+  - **安全跨平台檔案總管喚起 (`core.platform_open`) (FR-13)**：
+    - 支援 Windows (`explorer`)、macOS (`open`) 與 Linux (`xdg-open`) 一鍵開啟技能目錄。
+    - 嚴禁 `shell=True`，實作嚴格路徑存在性校驗與路徑周遊安全防護（CWE-78 / CWE-22）。
+  - **非同步事件驅動與效能保證 (`core.async_adapter`) (FR-10, NFR-06)**：
+    - 封裝 8 大非同步背景 Worker，耗時 I/O（檔案掃描、網路檢索、Git 版本拉取）完全自 TUI 主執行緒解耦。
+    - 確保終端渲染維持 60 FPS 流暢度，動態載入中指示器反饋。
+
+- **技能全域執行開關與常駐策略控制器 (`core.mode_controller`) (FR-07, FR-08, FR-09)**：
+  - **執行模式定義 (`SkillExecutionMode`)**：支援 `ALWAYS_ACTIVE`（全域常駐）、`ON_DEMAND`（特定時機按需調用）、`DISABLED`（禁用）與 `SYSTEM_DEFAULT`（依平台預設）。
+  - **Frontmatter 元資料安全讀寫**：精準解析與變更 `SKILL.md` 中 `execution_mode` 欄位，嚴格保留現有註解與其餘 frontmatter 內容。
+  - **原子替換與快照自動還原 (AC-08, EC-08, EC-09)**：
+    - 寫入採用 `.tmp.<timestamp>` 暫存檔與同分割區原子替換（`replace`）。
+    - 寫入前自動建立 `.snapshot.<timestamp>` 快照備份，若寫入失敗或異常自動 100% 回滾還原，達成 0 損壞、0 殘留。
+  - **全域常駐策略管理 (`GlobalPolicyMode`)**：支援一鍵批次套用全域策略，並提供唯讀技能鎖定保護與強制覆寫（`force=True`）機制。
+
+- **確定性五階段多代理人協作體系 (Brain ➔ Router ➔ 4 Workers)**：
+  - 完整落地 `tools/router.py`（拓撲派發、Git Worktree 隔離生命週期、AST 快取對齊、Exit Code 確定性狀態機）。
+  - 落地 `tools/run_stage3b.py` 與 `tools/run_stage4.py`，全量單元測試（R1/R2/R3）與資安檢查（Secrets/SAST/SCA/Least Privilege）自動化合規驗證。
+
+### Fixed (缺陷修復與代碼整改)
+- **邊界防禦與異常防護強化**：
+  - 補足 13/13 (100%) `EC-07` 至 `EC-14` 邊界測試案例覆蓋：
+    - `EC-07`：無 Frontmatter 之 `SKILL.md` 自動補齊標準 Frontmatter 結構。
+    - `EC-08`：磁碟空間耗盡與 I/O 寫入中斷時之快照自動復原機制。
+    - `EC-09`：目錄唯讀 (`PermissionError`) 之優雅錯誤報告與退出碼對齊。
+    - `EC-10`：跨平台特殊字元與非 UTF-8 編碼字元集相容讀寫。
+    - `EC-11`：無 TTY 終端、非互動 CI 環境自動降級 CLI。
+    - `EC-12`：網路逾時與斷線重試保護。
+    - `EC-13`：平台檔案總管開啟指令注入與路徑逃逸防護。
+    - `EC-14`：終端尺寸小於 80x24 時之畫面尺寸過小提示與安全調度。
+
+### Security (資安加固)
+- **CWE-78 (指令注入防禦)**：
+  - `core.platform_open` 嚴禁任何 `shell=True` 調用，以參數陣列隔離子程序執行。
+- **CWE-22 (路徑周遊防禦)**：
+  - 檔案總管開啟與模式控制器全面執行 `Path.resolve().is_relative_to()` 範圍限制。
+- **Secrets & SAST 掃描**：
+  - 通過 `run_stage4.py` 確定性資安閘門掃描，全專案 0 硬編碼金鑰、0 High/Medium 程式碼弱點。
+- **Docker 容器最小權限原則**：
+  - Multi-stage build，非 root `USER appuser (1000:1000)`，連續 3 次健康探針實測 200 OK。
+
+---
+
 ## [0.2.0] - 2026-10-29
 
 ### Added (新增功能)

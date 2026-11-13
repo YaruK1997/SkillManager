@@ -5,7 +5,7 @@ services:
       dockerfile: Dockerfile
       args:
         - HOST_OS=${HOST_OS:-linux}
-    image: skill-manager:0.2.0
+    image: skill-manager:0.3.0
     container_name: skill-manager
     restart: unless-stopped
     environment:
