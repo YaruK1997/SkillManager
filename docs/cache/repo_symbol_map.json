@@ -1,0 +1,1203 @@
+{
+  "schema_version": "1.0",
+  "updated_at": "2026-11-11T06:39:12+00:00",
+  "files": {
+    "src/skill_manager/__init__.py": {
+      "sha256": "sha256:82db328d57b3036720517987b270093f3eaa6737bb4ef308a5cbab1414ec5f27",
+      "symbols": []
+    },
+    "src/skill_manager/cli.py": {
+      "sha256": "sha256:58b9ef5f63d0e556026436b4c0c5c28b8c21c6e26bf7817dea6b10497d15eebe",
+      "symbols": [
+        {
+          "kind": "function",
+          "name": "main",
+          "signature": "def main(ctx: typer.Context, no_tui: bool=typer.Option(False, '--no-tui', help='Disable TUI on root invocation'), version: bool=typer.Option(False, '--version', '-v', help='Show version'))",
+          "lines": [
+            56,
+            80
+          ],
+          "doc_head": "Cross-platform Local AI Skills & Plugins Manager root entrypoint."
+        },
+        {
+          "kind": "function",
+          "name": "_output",
+          "signature": "def _output(data: dict, format_type: str, render_table_fn)",
+          "lines": [
+            83,
+            90
+          ],
+          "doc_head": "Output data as clean JSON or Rich table."
+        },
+        {
+          "kind": "function",
+          "name": "scan",
+          "signature": "def scan(platform: str=typer.Option('all', '--platform', '-p', help='Target platform (claude, antigravity, codex, cursor, universal, all)'), paths: Optional[List[str]]=typer.Option(None, '--path', '--custom-paths', '--custom_paths', help='Custom paths to scan'), depth: int=typer.Option(3, '--depth', '-d', min=1, max=5, help='Scan depth (1-5)'), format: str=typer.Option('table', '--format', '-f', help='Output format: table or json'), config: Optional[str]=typer.Option(None, '--config', '-c', help='Config file path'))",
+          "lines": [
+            94,
+            133
+          ],
+          "doc_head": "Scan local storage for installed skills and plugins across platforms."
+        },
+        {
+          "kind": "function",
+          "name": "search",
+          "signature": "def search(query: str=typer.Argument(..., help='Search keyword (2-100 characters)'), source: str=typer.Option('all', '--source', '-s', help='Source: github, huggingface, or all'), sort: str=typer.Option('stars', '--sort', help='Sort by: stars or updated'), limit: int=typer.Option(20, '--limit', '-l', help='Number of results to retrieve (1-50)'), page: int=typer.Option(1, '--page', help='Page number'), format: str=typer.Option('table', '--format', '-f', help='Output format: table or json'))",
+          "lines": [
+            137,
+            182
+          ],
+          "doc_head": "Search for agent skills on GitHub and HuggingFace Hub."
+        },
+        {
+          "kind": "function",
+          "name": "audit",
+          "signature": "def audit(target: str=typer.Option(..., '--target', '-t', help='Target skill directory path'), index: Optional[str]=typer.Option(None, '--index', '-i', help='index.md specification path'), format: str=typer.Option('table', '--format', '-f', help='Output format: table or json'))",
+          "lines": [
+            186,
+            225
+          ],
+          "doc_head": "Audit a local skill structure against index.md specifications."
+        },
+        {
+          "kind": "function",
+          "name": "complete",
+          "signature": "def complete(target: str=typer.Option(..., '--target', '-t', help='Target skill directory path'), index: Optional[str]=typer.Option(None, '--index', '-i', help='index.md specification path'), dry_run: bool=typer.Option(True, '--dry-run/--no-dry-run', help='Whether to simulate changes without disk write'), format: str=typer.Option('table', '--format', '-f', help='Output format: table or json'))",
+          "lines": [
+            229,
+            273
+          ],
+          "doc_head": "Auto-complete missing SKILL.md sections and subdirectories based on index.md."
+        },
+        {
+          "kind": "function",
+          "name": "track",
+          "signature": "def track(action: str=typer.Argument(..., help='Action: status, upgrade, or rollback'), target: str=typer.Option(..., '--target', '-t', help='Target skill directory path'), ref: Optional[str]=typer.Option(None, '--ref', help='Target git ref or commit SHA'), force: bool=typer.Option(False, '--force', help='Force upgrade even if uncommitted changes exist'), format: str=typer.Option('table', '--format', '-f', help='Output format: table or json'))",
+          "lines": [
+            277,
+            319
+          ],
+          "doc_head": "Track, upgrade, or roll back skill versions."
+        },
+        {
+          "kind": "function",
+          "name": "config",
+          "signature": "def config(action: str=typer.Argument('show', help='Action: show'), config_file: Optional[str]=typer.Option(None, '--config', '-c', help='Config file path'), format: str=typer.Option('table', '--format', '-f', help='Output format: table or json'))",
+          "lines": [
+            323,
+            347
+          ],
+          "doc_head": "Manage and inspect SkillManager configuration (FR-05)."
+        },
+        {
+          "kind": "function",
+          "name": "workflow_audit_cmd",
+          "signature": "def workflow_audit_cmd(workflow: Optional[str]=typer.Option(None, '--workflow', '-w', help='Workflow specification file path (default: auto-detected workflow.md)'), platform: str=typer.Option('all', '--platform', '-p', help='Target platform (claude, antigravity, codex, cursor, universal, all)'), target_dir: Optional[str]=typer.Option(None, '--target-dir', '-t', help='Directory where missing skills will be installed/created'), sources: Optional[List[str]]=typer.Option(None, '--source', '-s', help='Candidate directories to copy existing skills from'), auto_complete: bool=typer.Option(False, '--auto-complete', '-a', help='Automatically complete missing or incomplete skills'), dry_run: bool=typer.Option(True, '--dry-run/--no-dry-run', help='Whether to simulate changes without disk write'), format: str=typer.Option('table', '--format', '-f', help='Output format: table or json'), config: Optional[str]=typer.Option(None, '--config', '-c', help='Config file path'))",
+          "lines": [
+            351,
+            451
+          ],
+          "doc_head": "Audit installed skills against current workflow requirements and optionally auto-complete."
+        },
+        {
+          "kind": "function",
+          "name": "healthcheck",
+          "signature": "def healthcheck(format: str=typer.Option('json', '--format', '-f', help='Output format: table or json'))",
+          "lines": [
+            455,
+            472
+          ],
+          "doc_head": "Execute system health check probe for container and runtime readiness."
+        },
+        {
+          "kind": "function",
+          "name": "mode",
+          "signature": "def mode(skill: Optional[str]=typer.Argument(None, help='Target skill directory path or name'), set_mode: Optional[str]=typer.Option(None, '--set', '-s', help='Target mode: resident or on_demand'), policy: Optional[str]=typer.Option(None, '--policy', help='Global policy: all_resident, all_on_demand, restore_last'), platform: str=typer.Option('all', '--platform', '-p', help='Target platform (claude, antigravity, codex, cursor, universal, all)'), paths: Optional[List[str]]=typer.Option(None, '--path', '--custom-paths', help='Custom paths to scan'), config: Optional[str]=typer.Option(None, '--config', '-c', help='Config file path'), format: str=typer.Option('table', '--format', '-f', help='Output format: table or json'))",
+          "lines": [
+            476,
+            598
+          ],
+          "doc_head": "Inspect or toggle skill execution mode and apply global policy (FR-07, FR-08, FR-13)."
+        },
+        {
+          "kind": "function",
+          "name": "tui",
+          "signature": "def tui(ctx: typer.Context, no_tui: bool=typer.Option(False, '--no-tui', help='Disable TUI and fallback to CLI output'), config: Optional[str]=typer.Option(None, '--config', '-c', help='Config file path'), platform: str=typer.Option('all', '--platform', '-p', help='Target platform'), paths: Optional[List[str]]=typer.Option(None, '--path', '--custom-paths', help='Custom paths to scan'))",
+          "lines": [
+            602,
+            630
+          ],
+          "doc_head": "Launch interactive Textual TUI dashboard (FR-10, FR-13, EC-11)."
+        }
+      ]
+    },
+    "src/skill_manager/config.py": {
+      "sha256": "sha256:b4b9688088a76f224b11815560fb6c7456aca5e2a85a9e8507428f49a827894b",
+      "symbols": [
+        {
+          "kind": "class",
+          "name": "AppConfig",
+          "methods": [],
+          "lines": [
+            12,
+            18
+          ],
+          "doc_head": "Runtime configuration for SkillManager."
+        },
+        {
+          "kind": "function",
+          "name": "detect_system_os",
+          "signature": "def detect_system_os() -> str",
+          "lines": [
+            21,
+            29
+          ],
+          "doc_head": "Detect operating system type: 'Windows', 'macOS', or 'Linux'."
+        },
+        {
+          "kind": "function",
+          "name": "get_host_os",
+          "signature": "def get_host_os() -> str",
+          "lines": [
+            32,
+            46
+          ],
+          "doc_head": "Get the host OS type, checking HOST_OS environment variable first (e.g. inside Docker),"
+        },
+        {
+          "kind": "function",
+          "name": "get_default_platform_paths",
+          "signature": "def get_default_platform_paths() -> Dict[PlatformType, List[Path]]",
+          "lines": [
+            49,
+            69
+          ],
+          "doc_head": "Determine standard global skill directories per platform across Windows, macOS, and Linux."
+        },
+        {
+          "kind": "function",
+          "name": "resolve_platform_paths",
+          "signature": "def resolve_platform_paths(platform: PlatformType=PlatformType.ALL, custom_paths: Optional[List[str]]=None, config: Optional[AppConfig]=None) -> List[Path]",
+          "lines": [
+            72,
+            111
+          ],
+          "doc_head": "Resolve and expand directory paths to inspect, combining defaults and custom overrides."
+        },
+        {
+          "kind": "function",
+          "name": "load_config",
+          "signature": "def load_config(config_path: Optional[str]=None) -> AppConfig",
+          "lines": [
+            114,
+            132
+          ],
+          "doc_head": "Load configuration from TOML file or environment variables."
+        }
+      ]
+    },
+    "src/skill_manager/core/__init__.py": {
+      "sha256": "sha256:f32630afd379c28e25bcac4b671933351acfe783a93678dba63f16b256b3ed1d",
+      "symbols": []
+    },
+    "src/skill_manager/core/async_adapter.py": {
+      "sha256": "sha256:1ed3127a8eec338e407fdfb8172104b6e30036ba6fb55f620cfab98a72ebb61c",
+      "symbols": [
+        {
+          "kind": "function",
+          "name": "async_scan_skills",
+          "signature": "def async_scan_skills(platform: PlatformType=PlatformType.ALL, custom_paths: Optional[List[str]]=None, config: Optional[AppConfig]=None, max_depth: int=3, on_progress: Optional[Callable[[ScanProgressEvent], Any]]=None) -> ScanResult",
+          "lines": [
+            36,
+            64
+          ],
+          "doc_head": "Run scan_skills asynchronously without blocking the event loop."
+        },
+        {
+          "kind": "function",
+          "name": "async_audit_skill",
+          "signature": "def async_audit_skill(skill_dir: Path | str, allow_empty: bool=False) -> AuditResult",
+          "lines": [
+            67,
+            70
+          ],
+          "doc_head": "Run audit_skill asynchronously."
+        },
+        {
+          "kind": "function",
+          "name": "async_complete_skill",
+          "signature": "def async_complete_skill(skill_dir: Path | str, dry_run: bool=True) -> Tuple[bool, str, List[str]]",
+          "lines": [
+            73,
+            76
+          ],
+          "doc_head": "Run complete_skill asynchronously."
+        },
+        {
+          "kind": "function",
+          "name": "async_check_version",
+          "signature": "def async_check_version(skill_path: Path | str, timeout: float=5.0) -> TrackResult",
+          "lines": [
+            79,
+            97
+          ],
+          "doc_head": "Run check_skill_version asynchronously with timeout guard against network freezes (EC-12)."
+        },
+        {
+          "kind": "function",
+          "name": "async_upgrade_skill",
+          "signature": "def async_upgrade_skill(skill_path: Path | str, force: bool=False) -> TrackResult",
+          "lines": [
+            100,
+            103
+          ],
+          "doc_head": "Run upgrade_skill asynchronously."
+        },
+        {
+          "kind": "function",
+          "name": "async_rollback_skill",
+          "signature": "def async_rollback_skill(skill_path: Path | str, target_tag: Optional[str]=None) -> TrackResult",
+          "lines": [
+            106,
+            109
+          ],
+          "doc_head": "Run rollback_skill asynchronously."
+        },
+        {
+          "kind": "function",
+          "name": "async_toggle_skill_mode",
+          "signature": "def async_toggle_skill_mode(skill_path: Path | str, target_mode: SkillExecutionMode | str, config_path: Optional[Path | str]=None) -> SkillModeChangedEvent",
+          "lines": [
+            112,
+            122
+          ],
+          "doc_head": "Run toggle_skill_mode asynchronously."
+        },
+        {
+          "kind": "function",
+          "name": "async_apply_global_policy",
+          "signature": "def async_apply_global_policy(policy: GlobalPolicyMode | str, skills: List[SkillEntity], platform: Optional[PlatformType | str]=None, config_path: Optional[Path | str]=None) -> GlobalPolicyChangedEvent",
+          "lines": [
+            125,
+            136
+          ],
+          "doc_head": "Run apply_global_policy asynchronously."
+        },
+        {
+          "kind": "function",
+          "name": "async_search_remote",
+          "signature": "def async_search_remote(query: str, source: str='all', limit: int=20, page: int=1, timeout: float=10.0) -> SearchResult",
+          "lines": [
+            139,
+            157
+          ],
+          "doc_head": "Search remote skills asynchronously with timeout handling."
+        },
+        {
+          "kind": "function",
+          "name": "async_audit_workflow",
+          "signature": "def async_audit_workflow(workflow_path: Optional[Path | str]=None, platform: PlatformType=PlatformType.ALL, skill_sources: Optional[List[str]]=None, custom_paths: Optional[List[str]]=None) -> WorkflowAuditResult",
+          "lines": [
+            160,
+            176
+          ],
+          "doc_head": "Run audit_workflow_skills asynchronously."
+        },
+        {
+          "kind": "function",
+          "name": "async_complete_workflow",
+          "signature": "def async_complete_workflow(workflow_path: Optional[Path | str]=None, platform: PlatformType=PlatformType.ALL, skill_sources: Optional[List[str]]=None, custom_paths: Optional[List[str]]=None, dry_run: bool=True) -> WorkflowCompleteResult",
+          "lines": [
+            179,
+            197
+          ],
+          "doc_head": "Run complete_workflow_skills asynchronously."
+        }
+      ]
+    },
+    "src/skill_manager/core/indexer.py": {
+      "sha256": "sha256:dd6123470b43ca00cb3eeca0152e25569f592e4431c27fccdc866d67536da5ac",
+      "symbols": [
+        {
+          "kind": "class",
+          "name": "IndexSchemaError",
+          "methods": [],
+          "lines": [
+            20,
+            22
+          ],
+          "doc_head": "Raised when index.md is invalid or cannot be parsed."
+        },
+        {
+          "kind": "function",
+          "name": "strip_markdown_code_blocks",
+          "signature": "def strip_markdown_code_blocks(text: str) -> str",
+          "lines": [
+            25,
+            31
+          ],
+          "doc_head": "Remove fenced code blocks and HTML comments from markdown text."
+        },
+        {
+          "kind": "function",
+          "name": "extract_markdown_headings",
+          "signature": "def extract_markdown_headings(text: str) -> List[str]",
+          "lines": [
+            34,
+            48
+          ],
+          "doc_head": "Extract clean markdown heading titles (ATX headings # to ###), stripping code blocks."
+        },
+        {
+          "kind": "function",
+          "name": "is_section_matching",
+          "signature": "def is_section_matching(target_sec: str, existing_heading: str) -> bool",
+          "lines": [
+            51,
+            66
+          ],
+          "doc_head": "Check if an existing heading matches target_sec with high precision."
+        },
+        {
+          "kind": "function",
+          "name": "parse_index_schema",
+          "signature": "def parse_index_schema(index_path: Path) -> Dict[str, Any]",
+          "lines": [
+            69,
+            103
+          ],
+          "doc_head": "Parse index.md or specification guide to extract required sections and structure."
+        },
+        {
+          "kind": "function",
+          "name": "audit_skill",
+          "signature": "def audit_skill(skill_dir: Path, index_path: Optional[Path]=None, allow_empty: bool=False) -> AuditResult",
+          "lines": [
+            106,
+            210
+          ],
+          "doc_head": "Audit target skill directory against index.md specifications."
+        },
+        {
+          "kind": "function",
+          "name": "build_completed_skill_md",
+          "signature": "def build_completed_skill_md(original_content: str, skill_name: str, missing_fields: List[str], missing_sections: List[str]) -> str",
+          "lines": [
+            213,
+            282
+          ],
+          "doc_head": "Build completed SKILL.md content, intelligently patching frontmatter and appending missing sections."
+        },
+        {
+          "kind": "function",
+          "name": "generate_skeleton_skill_md",
+          "signature": "def generate_skeleton_skill_md(skill_name: str, missing_fields: List[str], missing_sections: List[str], original_content: str) -> str",
+          "lines": [
+            285,
+            307
+          ],
+          "doc_head": "Generate proposed content and compute Unified Diff."
+        },
+        {
+          "kind": "function",
+          "name": "complete_skill",
+          "signature": "def complete_skill(skill_dir: Path, index_path: Optional[Path]=None, dry_run: bool=True, allow_empty: bool=True) -> Tuple[bool, str, List[str]]",
+          "lines": [
+            310,
+            380
+          ],
+          "doc_head": "Complete missing sections and directories in target skill."
+        }
+      ]
+    },
+    "src/skill_manager/core/mode_controller.py": {
+      "sha256": "sha256:e9324c636efb7896736bbec540b091b1f5689a7f7ca092751501ef9e53223ced",
+      "symbols": [
+        {
+          "kind": "function",
+          "name": "get_default_config_path",
+          "signature": "def get_default_config_path() -> Path",
+          "lines": [
+            26,
+            28
+          ],
+          "doc_head": "Return default configuration path for SkillManager."
+        },
+        {
+          "kind": "function",
+          "name": "get_skill_mode_from_frontmatter",
+          "signature": "def get_skill_mode_from_frontmatter(metadata: Dict[str, Any]) -> SkillExecutionMode",
+          "lines": [
+            31,
+            38
+          ],
+          "doc_head": "Determine execution mode from parsed YAML frontmatter."
+        },
+        {
+          "kind": "function",
+          "name": "get_skill_mode",
+          "signature": "def get_skill_mode(skill_dir: Path | str) -> SkillExecutionMode",
+          "lines": [
+            41,
+            63
+          ],
+          "doc_head": "Inspect SKILL.md in directory and return current execution mode."
+        },
+        {
+          "kind": "function",
+          "name": "_atomic_write_file",
+          "signature": "def _atomic_write_file(path: Path, content: str) -> None",
+          "lines": [
+            66,
+            78
+          ],
+          "doc_head": "Atomically write content to file using a .tmp file and os.replace."
+        },
+        {
+          "kind": "function",
+          "name": "update_frontmatter_mode",
+          "signature": "def update_frontmatter_mode(content: str, target_mode: SkillExecutionMode, fallback_name: str='') -> str",
+          "lines": [
+            81,
+            118
+          ],
+          "doc_head": "Safely update or inject activation and alwaysApply in SKILL.md frontmatter."
+        },
+        {
+          "kind": "function",
+          "name": "load_config_toml",
+          "signature": "def load_config_toml(config_path: Optional[Path | str]=None) -> Dict[str, Any]",
+          "lines": [
+            121,
+            131
+          ],
+          "doc_head": "Read config.toml into a nested dict."
+        },
+        {
+          "kind": "function",
+          "name": "save_config_toml",
+          "signature": "def save_config_toml(data: Dict[str, Any], config_path: Optional[Path | str]=None) -> None",
+          "lines": [
+            134,
+            166
+          ],
+          "doc_head": "Serialize and atomically save dict as simple TOML."
+        },
+        {
+          "kind": "function",
+          "name": "toggle_skill_mode",
+          "signature": "def toggle_skill_mode(skill_path: Path | str, target_mode: SkillExecutionMode | str, config_path: Optional[Path | str]=None) -> SkillModeChangedEvent",
+          "lines": [
+            169,
+            210
+          ],
+          "doc_head": "Toggle or explicitly set execution mode for a single skill."
+        },
+        {
+          "kind": "function",
+          "name": "apply_global_policy",
+          "signature": "def apply_global_policy(policy: GlobalPolicyMode | str, skills: List[SkillEntity], platform: Optional[PlatformType | str]=None, config_path: Optional[Path | str]=None) -> GlobalPolicyChangedEvent",
+          "lines": [
+            213,
+            310
+          ],
+          "doc_head": "Apply global execution policy across skills (ALL_RESIDENT, ALL_ON_DEMAND, or CUSTOM)."
+        }
+      ]
+    },
+    "src/skill_manager/core/platform_open.py": {
+      "sha256": "sha256:f73c167a770100803f0f3f7281cf39ab8288fb781dc1be8ba6961be342716035",
+      "symbols": [
+        {
+          "kind": "function",
+          "name": "get_open_command",
+          "signature": "def get_open_command(folder_path: Path | str, os_name: Optional[str]=None) -> list[str]",
+          "lines": [
+            12,
+            25
+          ],
+          "doc_head": "Build the safe argument vector to open the file manager for the given path."
+        },
+        {
+          "kind": "function",
+          "name": "open_folder_in_file_manager",
+          "signature": "def open_folder_in_file_manager(folder_path: Path | str) -> bool",
+          "lines": [
+            28,
+            49
+          ],
+          "doc_head": "Launch native desktop file manager pointing to folder_path."
+        }
+      ]
+    },
+    "src/skill_manager/core/remote_search.py": {
+      "sha256": "sha256:28adf7c29a6b5ebd15f8dca9f25c62a07364d529721a4aedf929243468cccf0f",
+      "symbols": [
+        {
+          "kind": "class",
+          "name": "RemoteSearchError",
+          "methods": [],
+          "lines": [
+            13,
+            15
+          ],
+          "doc_head": "Custom exception raised during remote search queries."
+        },
+        {
+          "kind": "class",
+          "name": "RateLimitExceededError",
+          "methods": [
+            "__init__"
+          ],
+          "lines": [
+            18,
+            22
+          ],
+          "doc_head": "Raised when GitHub or HuggingFace rate limit is reached."
+        },
+        {
+          "kind": "function",
+          "name": "_build_github_headers",
+          "signature": "def _build_github_headers(token: Optional[str]=None) -> Dict[str, str]",
+          "lines": [
+            25,
+            33
+          ],
+          "doc_head": ""
+        },
+        {
+          "kind": "function",
+          "name": "_build_hf_headers",
+          "signature": "def _build_hf_headers(token: Optional[str]=None) -> Dict[str, str]",
+          "lines": [
+            36,
+            43
+          ],
+          "doc_head": ""
+        },
+        {
+          "kind": "function",
+          "name": "_execute_request_with_retry",
+          "signature": "def _execute_request_with_retry(client: httpx.Client, method: str, url: str, headers: Dict[str, str], params: Optional[Dict[str, Any]]=None, max_retries: int=3) -> httpx.Response",
+          "lines": [
+            46,
+            89
+          ],
+          "doc_head": "Execute HTTP request with exponential backoff (1s, 2s, 4s) on transient errors."
+        },
+        {
+          "kind": "function",
+          "name": "search_github",
+          "signature": "def search_github(query: str, sort_by: str='stars', limit: int=20, page: int=1, token: Optional[str]=None, client: Optional[httpx.Client]=None) -> List[SearchItem]",
+          "lines": [
+            92,
+            147
+          ],
+          "doc_head": "Search repositories on GitHub matching skill keywords and topics."
+        },
+        {
+          "kind": "function",
+          "name": "search_huggingface",
+          "signature": "def search_huggingface(query: str, limit: int=20, token: Optional[str]=None, client: Optional[httpx.Client]=None) -> List[SearchItem]",
+          "lines": [
+            150,
+            199
+          ],
+          "doc_head": "Search HuggingFace Spaces and Models related to tools and skills."
+        },
+        {
+          "kind": "function",
+          "name": "search_remote_skills",
+          "signature": "def search_remote_skills(query: str, source: str='all', sort_by: str='stars', limit: int=20, page: int=1, github_token: Optional[str]=None, hf_token: Optional[str]=None, client: Optional[httpx.Client]=None) -> SearchResult",
+          "lines": [
+            202,
+            253
+          ],
+          "doc_head": "Execute remote search on GitHub, HuggingFace, or both."
+        }
+      ]
+    },
+    "src/skill_manager/core/scanner.py": {
+      "sha256": "sha256:074a5b2b1a7dbbd96ac346eee1b8b0c8d0e7f1a89912409577a2f68ebff1704f",
+      "symbols": [
+        {
+          "kind": "function",
+          "name": "parse_yaml_frontmatter",
+          "signature": "def parse_yaml_frontmatter(file_path: Path) -> Tuple[Dict[str, Any], str]",
+          "lines": [
+            20,
+            64
+          ],
+          "doc_head": "Extract YAML frontmatter and body from a markdown file."
+        },
+        {
+          "kind": "function",
+          "name": "inspect_single_skill",
+          "signature": "def inspect_single_skill(dir_path: Path, platform: PlatformType) -> Optional[SkillEntity]",
+          "lines": [
+            67,
+            138
+          ],
+          "doc_head": "Inspect a directory to determine if it is a valid skill and extract its metadata."
+        },
+        {
+          "kind": "function",
+          "name": "scan_directory_tree",
+          "signature": "def scan_directory_tree(root_dir: Path, platform: PlatformType, max_depth: int=3, visited_realpaths: Optional[Set[str]]=None) -> Iterator[SkillEntity]",
+          "lines": [
+            141,
+            210
+          ],
+          "doc_head": "Walk directory using os.scandir with depth limit and circular symlink protection."
+        },
+        {
+          "kind": "function",
+          "name": "scan_skills",
+          "signature": "def scan_skills(platform: PlatformType=PlatformType.ALL, custom_paths: Optional[List[str]]=None, max_depth: int=3, config: Optional[AppConfig]=None) -> ScanResult",
+          "lines": [
+            213,
+            268
+          ],
+          "doc_head": "Scan all designated local paths and gather SkillEntity records."
+        }
+      ]
+    },
+    "src/skill_manager/core/versioning.py": {
+      "sha256": "sha256:de7c7800c361e9fffbd7d664d078eee43a1bd7585338af103b768e2675828008",
+      "symbols": [
+        {
+          "kind": "function",
+          "name": "_validate_git_ref",
+          "signature": "def _validate_git_ref(ref: str) -> str",
+          "lines": [
+            16,
+            21
+          ],
+          "doc_head": "Validate git reference string against argument injection (CWE-88)."
+        },
+        {
+          "kind": "class",
+          "name": "GitVersionError",
+          "methods": [],
+          "lines": [
+            24,
+            26
+          ],
+          "doc_head": "Base exception for version control operations."
+        },
+        {
+          "kind": "class",
+          "name": "DirtyWorktreeError",
+          "methods": [],
+          "lines": [
+            29,
+            31
+          ],
+          "doc_head": "Raised when uncommitted changes prevent safe upgrade."
+        },
+        {
+          "kind": "class",
+          "name": "GitNetworkTimeoutError",
+          "methods": [],
+          "lines": [
+            34,
+            36
+          ],
+          "doc_head": "Raised when git fetch or remote communication times out."
+        },
+        {
+          "kind": "function",
+          "name": "get_git_repo",
+          "signature": "def get_git_repo(skill_dir: Path) -> git.Repo",
+          "lines": [
+            39,
+            47
+          ],
+          "doc_head": "Load Git repository or raise error if untracked."
+        },
+        {
+          "kind": "function",
+          "name": "check_version_status",
+          "signature": "def check_version_status(skill_dir: Path, fetch_remote: bool=True) -> TrackResult",
+          "lines": [
+            50,
+            157
+          ],
+          "doc_head": "Inspect local git repository and compare with remote tracking branch."
+        },
+        {
+          "kind": "function",
+          "name": "upgrade_skill",
+          "signature": "def upgrade_skill(skill_dir: Path, target_ref: Optional[str]=None, force: bool=False) -> TrackResult",
+          "lines": [
+            160,
+            201
+          ],
+          "doc_head": "Safely upgrade a skill to remote reference, creating a snapshot tag beforehand."
+        },
+        {
+          "kind": "function",
+          "name": "rollback_skill",
+          "signature": "def rollback_skill(skill_dir: Path, tag_name: Optional[str]=None) -> TrackResult",
+          "lines": [
+            204,
+            231
+          ],
+          "doc_head": "Roll back local repository to previous backup tag."
+        }
+      ]
+    },
+    "src/skill_manager/core/workflow_auditor.py": {
+      "sha256": "sha256:0d8ca805e0dc90b824c6fbae57782d297ede9c819d20df52555ed9bfc729cedd",
+      "symbols": [
+        {
+          "kind": "class",
+          "name": "WorkflowAuditError",
+          "methods": [],
+          "lines": [
+            30,
+            32
+          ],
+          "doc_head": "Base exception for workflow audit operations."
+        },
+        {
+          "kind": "function",
+          "name": "find_default_workflow_file",
+          "signature": "def find_default_workflow_file(start_dir: Optional[Path]=None) -> Optional[Path]",
+          "lines": [
+            35,
+            47
+          ],
+          "doc_head": "Auto-detect workflow specification file in current workspace."
+        },
+        {
+          "kind": "function",
+          "name": "parse_workflow_requirements",
+          "signature": "def parse_workflow_requirements(workflow_path: Path) -> List[str]",
+          "lines": [
+            50,
+            125
+          ],
+          "doc_head": "Parse workflow.md to extract required skill names and identifiers."
+        },
+        {
+          "kind": "function",
+          "name": "find_skill_in_sources",
+          "signature": "def find_skill_in_sources(skill_name: str, source_dirs: List[Path]) -> Optional[Path]",
+          "lines": [
+            128,
+            157
+          ],
+          "doc_head": "Search for an existing skill directory within candidate source directories."
+        },
+        {
+          "kind": "function",
+          "name": "audit_workflow_skills",
+          "signature": "def audit_workflow_skills(workflow_path: Optional[Path]=None, platform: PlatformType=PlatformType.ALL, custom_paths: Optional[List[str]]=None, config: Optional[AppConfig]=None) -> WorkflowAuditResult",
+          "lines": [
+            160,
+            255
+          ],
+          "doc_head": "Audit local skills against workflow specifications."
+        },
+        {
+          "kind": "function",
+          "name": "complete_workflow_skills",
+          "signature": "def complete_workflow_skills(audit_result: WorkflowAuditResult, target_dir: Optional[Path]=None, skill_sources: Optional[List[Path]]=None, dry_run: bool=True) -> WorkflowCompleteResult",
+          "lines": [
+            258,
+            377
+          ],
+          "doc_head": "Auto-complete missing or incomplete workflow skills."
+        }
+      ]
+    },
+    "src/skill_manager/events.py": {
+      "sha256": "sha256:8976013a18a874d2abe684a19f23b69eb2e6a46b35d482f72b90b6c2ed464796",
+      "symbols": [
+        {
+          "kind": "class",
+          "name": "UIMode",
+          "methods": [],
+          "lines": [
+            16,
+            19
+          ],
+          "doc_head": "UI presentation mode."
+        },
+        {
+          "kind": "class",
+          "name": "ScanProgressEvent",
+          "methods": [],
+          "lines": [
+            23,
+            26
+          ],
+          "doc_head": ""
+        },
+        {
+          "kind": "class",
+          "name": "SkillSelectedEvent",
+          "methods": [],
+          "lines": [
+            30,
+            31
+          ],
+          "doc_head": ""
+        },
+        {
+          "kind": "class",
+          "name": "SkillModeChangedEvent",
+          "methods": [],
+          "lines": [
+            35,
+            42
+          ],
+          "doc_head": ""
+        },
+        {
+          "kind": "class",
+          "name": "GlobalPolicyChangedEvent",
+          "methods": [],
+          "lines": [
+            46,
+            51
+          ],
+          "doc_head": ""
+        },
+        {
+          "kind": "class",
+          "name": "AuditCompleteEvent",
+          "methods": [],
+          "lines": [
+            55,
+            57
+          ],
+          "doc_head": ""
+        },
+        {
+          "kind": "class",
+          "name": "VersionUpdateEvent",
+          "methods": [],
+          "lines": [
+            61,
+            63
+          ],
+          "doc_head": ""
+        },
+        {
+          "kind": "class",
+          "name": "LogEvent",
+          "methods": [],
+          "lines": [
+            67,
+            70
+          ],
+          "doc_head": ""
+        }
+      ]
+    },
+    "src/skill_manager/models.py": {
+      "sha256": "sha256:bf84b62e90a5db60e7fc6835790a16ce51b053439ee82a136bb0857fba56f3a1",
+      "symbols": [
+        {
+          "kind": "class",
+          "name": "VersionStatus",
+          "methods": [],
+          "lines": [
+            9,
+            17
+          ],
+          "doc_head": "Skill version control and synchronization status."
+        },
+        {
+          "kind": "class",
+          "name": "PlatformType",
+          "methods": [],
+          "lines": [
+            20,
+            27
+          ],
+          "doc_head": "Supported agent/assistant platforms."
+        },
+        {
+          "kind": "class",
+          "name": "SkillExecutionMode",
+          "methods": [],
+          "lines": [
+            30,
+            33
+          ],
+          "doc_head": "技能執行與調用模式定義"
+        },
+        {
+          "kind": "class",
+          "name": "GlobalPolicyMode",
+          "methods": [],
+          "lines": [
+            36,
+            40
+          ],
+          "doc_head": "全域開關總策略模式"
+        },
+        {
+          "kind": "class",
+          "name": "SkillEntity",
+          "methods": [],
+          "lines": [
+            43,
+            60
+          ],
+          "doc_head": "Represents a discovered or managed skill."
+        },
+        {
+          "kind": "class",
+          "name": "ScanSummary",
+          "methods": [],
+          "lines": [
+            63,
+            67
+          ],
+          "doc_head": "Summary statistics for a scanning operation."
+        },
+        {
+          "kind": "class",
+          "name": "ScanResult",
+          "methods": [],
+          "lines": [
+            70,
+            73
+          ],
+          "doc_head": "Structured result returned by the scanner module."
+        },
+        {
+          "kind": "class",
+          "name": "SearchItem",
+          "methods": [],
+          "lines": [
+            76,
+            84
+          ],
+          "doc_head": "Single item retrieved from remote repository search."
+        },
+        {
+          "kind": "class",
+          "name": "SearchResult",
+          "methods": [],
+          "lines": [
+            87,
+            92
+          ],
+          "doc_head": "Paginated search response for remote skills."
+        },
+        {
+          "kind": "class",
+          "name": "AuditResult",
+          "methods": [],
+          "lines": [
+            95,
+            102
+          ],
+          "doc_head": "Outcome of checking a skill directory against index.md specifications."
+        },
+        {
+          "kind": "class",
+          "name": "TrackResult",
+          "methods": [],
+          "lines": [
+            105,
+            113
+          ],
+          "doc_head": "Version tracking details for an individual skill."
+        },
+        {
+          "kind": "class",
+          "name": "WorkflowSkillStatus",
+          "methods": [],
+          "lines": [
+            116,
+            120
+          ],
+          "doc_head": "Readiness status of a required workflow skill."
+        },
+        {
+          "kind": "class",
+          "name": "WorkflowSkillRequirement",
+          "methods": [],
+          "lines": [
+            123,
+            131
+          ],
+          "doc_head": "Represents a skill requirement declared in workflow documentation."
+        },
+        {
+          "kind": "class",
+          "name": "WorkflowCompleteResult",
+          "methods": [],
+          "lines": [
+            134,
+            141
+          ],
+          "doc_head": "Result of an automated workflow skills completion operation."
+        },
+        {
+          "kind": "class",
+          "name": "WorkflowAuditResult",
+          "methods": [],
+          "lines": [
+            144,
+            153
+          ],
+          "doc_head": "Comprehensive audit report comparing workflow requirements against local installation."
+        }
+      ]
+    },
+    "src/skill_manager/tui/__init__.py": {
+      "sha256": "sha256:844a06777e9eaafd70c1582c8fa866a3cb18fa90c0d381842c4bf472fd613a34",
+      "symbols": []
+    },
+    "src/skill_manager/tui/app.py": {
+      "sha256": "sha256:2638ac1be51014b9dd9e218738a87da8b52b14c001567c98230d287b3e05429a",
+      "symbols": [
+        {
+          "kind": "class",
+          "name": "SkillManagerApp",
+          "methods": [
+            "__init__",
+            "compose",
+            "on_mount",
+            "on_resize",
+            "check_terminal_size",
+            "_async_load_skills",
+            "_update_skill_list",
+            "_update_detail_panels",
+            "on_list_view_selected",
+            "on_input_changed",
+            "action_focus_filter",
+            "action_next_tab",
+            "action_select_tab",
+            "action_toggle_mode",
+            "action_open_folder",
+            "action_audit_skill",
+            "action_complete_skill",
+            "action_global_policy",
+            "action_upgrade_skill",
+            "action_rollback_skill"
+          ],
+          "lines": [
+            119,
+            396
+          ],
+          "doc_head": "Full-featured interactive TUI dashboard for local AI skills."
+        }
+      ]
+    },
+    "src/skill_manager/tui/widgets/__init__.py": {
+      "sha256": "sha256:66fd2a241eb8394a60409e092695e13a825560558333fa48a4fa8d41d5e39626",
+      "symbols": []
+    },
+    "src/skill_manager/tui/widgets/diff_viewer.py": {
+      "sha256": "sha256:7e6237bdd6758fac0efbb309361a6d7ec6889f3c41958ca27d73aebfca26fdc7",
+      "symbols": [
+        {
+          "kind": "class",
+          "name": "DiffViewer",
+          "methods": [
+            "__init__",
+            "compose",
+            "show_diff",
+            "clear"
+          ],
+          "lines": [
+            11,
+            56
+          ],
+          "doc_head": "Scrollable container rendering unified diff with Rich syntax highlighting."
+        }
+      ]
+    },
+    "src/skill_manager/tui/widgets/global_switch_modal.py": {
+      "sha256": "sha256:2f898335f501a8508e569f9d2fec271b4c4a344860104e54ae2c239204677079",
+      "symbols": [
+        {
+          "kind": "class",
+          "name": "GlobalSwitchModal",
+          "methods": [
+            "compose",
+            "on_button_pressed"
+          ],
+          "lines": [
+            14,
+            85
+          ],
+          "doc_head": "Modal screen allowing the user to select and apply a global policy mode."
+        }
+      ]
+    },
+    "src/skill_manager/tui/widgets/remote_search_view.py": {
+      "sha256": "sha256:c6509c08f361a1e37da1763d8964ed8637d435bd2998ff363bb18b9a03abbbe6",
+      "symbols": [
+        {
+          "kind": "class",
+          "name": "RemoteSearchView",
+          "methods": [
+            "__init__",
+            "compose",
+            "on_mount",
+            "on_input_changed",
+            "_perform_search",
+            "on_data_table_row_selected"
+          ],
+          "lines": [
+            25,
+            161
+          ],
+          "doc_head": "Remote skills search interface with 300ms debounce and non-blocking worker."
+        }
+      ]
+    },
+    "src/skill_manager/tui/widgets/skill_tree.py": {
+      "sha256": "sha256:722903ed58dcbc2d29b98670b7f8e3bd1ea133f66171cf25fc59e5a32fd433e4",
+      "symbols": [
+        {
+          "kind": "class",
+          "name": "SkillTree",
+          "methods": [
+            "__init__",
+            "populate",
+            "on_tree_node_highlighted",
+            "on_tree_node_selected"
+          ],
+          "lines": [
+            14,
+            69
+          ],
+          "doc_head": "Tree widget presenting local skills grouped by platform with mode and health badges."
+        }
+      ]
+    },
+    "src/skill_manager/tui/widgets/workflow_view.py": {
+      "sha256": "sha256:ff66fa2eab2f58570cfe7c795bf5a6106d551e76ab929a3ed29dbd9e4dda4512",
+      "symbols": [
+        {
+          "kind": "class",
+          "name": "WorkflowView",
+          "methods": [
+            "__init__",
+            "compose",
+            "on_mount",
+            "populate_items",
+            "get_selected_skill_names",
+            "on_button_pressed",
+            "update_item_status"
+          ],
+          "lines": [
+            21,
+            140
+          ],
+          "doc_head": "Interactive matrix for inspecting and selectively completing workflow skills."
+        }
+      ]
+    }
+  }
+}

@@ -81,3 +81,5 @@ desktop.ini
 
 # Workflow
 Workflow-for-Agent/
+.scratch/
+.worktrees/

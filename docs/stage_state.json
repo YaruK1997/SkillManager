@@ -1,0 +1,29 @@
+{
+  "schema_version": "2.0.0",
+  "current_stage": "STAGE_3A",
+  "updated_at": "2026-11-13T02:14:30+00:00",
+  "human_gates": {
+    "stage1_spec_dag_approved": true,
+    "stage2_impl_review_approved": true
+  },
+  "task_states": {
+    "T-S2-01-MODEL": "COMPLETED",
+    "T-S2-02-MODE": "COMPLETED",
+    "T-S2-03-SCANNER": "COMPLETED",
+    "T-S2-07-PLATFORM-OPEN": "COMPLETED",
+    "T-S2-04-ASYNC": "COMPLETED",
+    "T-S2-09-DEPS": "COMPLETED",
+    "T-S2-05-TUI-APP": "COMPLETED",
+    "T-S2-06-TUI-WIDGETS": "COMPLETED",
+    "T-S2-08-CLI-MODE": "COMPLETED"
+  },
+  "stage3b_counters": {
+    "total_repair_loops": 0,
+    "spec_defect_count": 0,
+    "defect_retries": {},
+    "escalated_defects": []
+  },
+  "stage4_counters": {
+    "vuln_retries": {}
+  }
+}
